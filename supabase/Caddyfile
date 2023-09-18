@@ -1,0 +1,6 @@
+:80 {
+	reverse_proxy http://studio:3000
+    basicauth * {
+       admin $2a$14$mZ.hMavKULcbqQeQcveQt.t0FPs7WYHsXhN0qDiLp6.xNDZL3MNR.
+    }
+}

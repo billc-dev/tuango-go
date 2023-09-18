@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo:/data/db
+
+  studio:
+    extends:
+      file: ./supabase/docker-compose.yml
+      service: studio
+    labels:
+      - dev.orbstack.domains=studio.local
+
+  kong:
+    extends:
+      file: ./supabase/docker-compose.yml
+      service: kong
+
+    # authentication:
+    #     extends:
+    #         file: ./supabase/docker-compose.yml
+    #         service: authentication
+
+  rest:
+    extends:
+      file: ./supabase/docker-compose.yml
+      service: rest
+
+    # realtime:
+    #     extends:
+    #         file: ./supabase/docker-compose.yml
+    #         service: realtime
+
+  storage:
+    extends:
+      file: ./supabase/docker-compose.yml
+      service: storage
+
+  imgproxy:
+    extends:
+      file: ./supabase/docker-compose.yml
+      service: imgproxy
+
+  meta:
+    extends:
+      file: ./supabase/docker-compose.yml
+      service: meta
+
+    # functions:
+    #     extends:
+    #         file: ./supabase/docker-compose.yml
+    #         service: functions
+
+  database:
+    extends:
+      file: ./supabase/docker-compose.yml
+      service: database
+    ports:
+      - 5432:5432
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+
+volumes:
+  database:
+  storage:
+  mongo:
