@@ -1,4 +1,4 @@
-package handler_admin
+package admin
 
 import (
 	"log"

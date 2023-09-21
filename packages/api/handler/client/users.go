@@ -1,10 +1,11 @@
-package handler_client
+package client
 
 import (
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/billc-dev/tuango-go/database"
@@ -19,6 +20,7 @@ import (
 	"github.com/billc-dev/tuango-go/ent/roomuser"
 	"github.com/billc-dev/tuango-go/ent/user"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func GetUser(c *fiber.Ctx) error {
@@ -37,6 +39,26 @@ func GetUser(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"data": u,
 	})
+}
+
+const JWT_SECRET = "lkasjdfkljalskdfjaslkdfj"
+
+func Login() error {
+	userID := ""
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
+		jwt.MapClaims{
+			"userID":    userID,
+			"ExpiresAt": time.Now().Add(10 * time.Minute),
+		},
+	)
+
+	accessString, err := token.SignedString(JWT_SECRET)
+	if err != nil {
+		log.Printf("Failed to sign the token due to: %v", err)
+		return err
+	}
+	log.Print(accessString)
+	return nil
 }
 
 func GetLikes(c *fiber.Ctx) error {

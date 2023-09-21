@@ -1,4 +1,4 @@
-package handler_client
+package client
 
 import (
 	"fmt"

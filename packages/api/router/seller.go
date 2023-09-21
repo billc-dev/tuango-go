@@ -7,7 +7,7 @@ import (
 
 	"github.com/billc-dev/tuango-go/database"
 	"github.com/billc-dev/tuango-go/ent/user"
-	"github.com/billc-dev/tuango-go/handler_seller"
+	"github.com/billc-dev/tuango-go/handler/seller"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,13 +15,13 @@ func SetupSellerRoutes(app *fiber.App) {
 	v1 := app.Group("/api/seller/v1")
 
 	posts := v1.Group("/posts")
-	posts.Get("/", SellerAuthenticated, handler_seller.GetPosts)             // get seller posts => query status
-	posts.Post("/", SellerAuthenticated, handler_seller.CreatePost)          // create post
-	posts.Put("/:id", SellerAuthenticated, handler_seller.UpdatePost)        // update post
-	posts.Patch("/:id/close", SellerAuthenticated, handler_seller.ClosePost) // update post status to closed
+	posts.Get("/", SellerAuthenticated, seller.GetPosts)             // get seller posts => query status
+	posts.Post("/", SellerAuthenticated, seller.CreatePost)          // create post
+	posts.Put("/:id", SellerAuthenticated, seller.UpdatePost)        // update post
+	posts.Patch("/:id/close", SellerAuthenticated, seller.ClosePost) // update post status to closed
 
 	// orders := v1.Group("/orders")
-	// orders.Patch("/:id", SellerAuthenticated, handler_seller.SetHasName)
+	// orders.Patch("/:id", SellerAuthenticated, seller.SetHasName)
 }
 
 func SellerAuthenticated(c *fiber.Ctx) error {

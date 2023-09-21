@@ -3,3 +3,4 @@ air
 seeds/
 tmp/
 vendor/
+.DS_Store

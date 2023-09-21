@@ -1,4 +1,4 @@
-package handler_seller
+package seller
 
 import (
 	"fmt"

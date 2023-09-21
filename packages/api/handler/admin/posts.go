@@ -1,4 +1,4 @@
-package handler_admin
+package admin
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	"github.com/billc-dev/tuango-go/ent/predicate"
 	"github.com/billc-dev/tuango-go/ent/schema"
 	"github.com/billc-dev/tuango-go/ent/user"
-	"github.com/billc-dev/tuango-go/handler_seller"
+	"github.com/billc-dev/tuango-go/handler/seller"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -219,11 +219,11 @@ func CreatePost(c *fiber.Ctx) error {
 		return fiber.NewError(http.StatusInternalServerError, "Could not create post")
 	}
 
-	if len(postForm.Items) > len(handler_seller.Alphabets) {
+	if len(postForm.Items) > len(seller.Alphabets) {
 		tx.Rollback()
 		return fiber.NewError(
 			http.StatusInternalServerError,
-			fmt.Sprintf("Post items length is more than %v", len(handler_seller.Alphabets)),
+			fmt.Sprintf("Post items length is more than %v", len(seller.Alphabets)),
 		)
 	}
 
@@ -233,7 +233,7 @@ func CreatePost(c *fiber.Ctx) error {
 		postItems = append(postItems,
 			tx.PostItem.Create().
 				SetPostID(newPost.ID).
-				SetIdentifier(handler_seller.Alphabets[index]).
+				SetIdentifier(seller.Alphabets[index]).
 				SetName(item.Name).
 				SetPrice(item.Price).
 				SetStock(item.Stock),
@@ -331,7 +331,7 @@ func UpdatePost(c *fiber.Ctx) error {
 		postItems = append(postItems,
 			tx.PostItem.Create().
 				SetPostID(postID).
-				SetIdentifier(handler_seller.Alphabets[index]).
+				SetIdentifier(seller.Alphabets[index]).
 				SetName(item.Name).
 				SetPrice(item.Price).
 				SetStock(item.Stock),
