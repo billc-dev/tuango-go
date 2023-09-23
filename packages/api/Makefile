@@ -9,3 +9,7 @@ create-migration:
 		--dev-url "docker://postgres/15/test?search_path=public"
 docker-up:
 	docker compose up -d
+swag-generate:
+	swag init
+swag-fmt:
+	swag fmt

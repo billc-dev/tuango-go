@@ -17,26 +17,59 @@ import (
 	"github.com/billc-dev/tuango-go/ent/predicate"
 	"github.com/billc-dev/tuango-go/ent/schema"
 	"github.com/billc-dev/tuango-go/ent/user"
-	"github.com/billc-dev/tuango-go/handler/seller"
+	"github.com/billc-dev/tuango-go/handlers/seller"
 	"github.com/gofiber/fiber/v2"
 )
 
+type ResponseHTTP struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data"`
+	Count   int         `json:"count"`
+}
+
+type PaginationResult struct {
+	Success bool `json:"success"`
+	Data    struct {
+		Count       int  `json:"count"`
+		HasNextPage bool `json:"has_next_page"`
+	} `json:"data"`
+}
+
+type Object struct {
+}
+
+// GetPosts
+//
+//	@Summary	Paginate posts
+//	@Tags		posts
+//	@Produce	json
+//	@Param		post_num		query		number		false	"Post number"
+//	@Param		status			query		post.Status	false	"Post status"
+//	@Param		text			query		string		false	"Text"
+//	@Param		deadline		query		string		false	"Deadline"
+//	@Param		delivery_date	query		string		false	"Delivery date"
+//	@Param		seller_id		query		string		false	"Seller ID"
+//	@Param		page			query		number		false	"Page (0-based)"	default(0)
+//	@Success	200				{object}	getPostsResult
+//	@Failure	500				{object}	utils.HTTPError
+//	@Security	BearerToken
+//	@Router		/admin/v1/posts [get]
 func GetPosts(c *fiber.Ctx) error {
 	m := c.Queries()
 
 	postWhere := []predicate.Post{}
 
-	if postNum, err := strconv.Atoi(m["postNum"]); err == nil {
+	if postNum, err := strconv.Atoi(m["post_num"]); err == nil {
 		postWhere = append(postWhere, post.PostNumEQ(postNum))
 	}
 
-	status := post.Status(m["status"])
-	if err := post.StatusValidator(status); err != nil {
-		return fiber.NewError(
-			http.StatusInternalServerError,
-			fmt.Sprintf(`Post status "%v" is not valid`, status),
-		)
-	} else {
+	if status := post.Status(m["status"]); status != "" {
+		if err := post.StatusValidator(status); err != nil {
+			return fiber.NewError(
+				http.StatusInternalServerError,
+				fmt.Sprintf(`Post status "%v" is not valid`, status),
+			)
+		}
 		postWhere = append(postWhere, post.StatusEQ(status))
 	}
 
@@ -51,11 +84,11 @@ func GetPosts(c *fiber.Ctx) error {
 		postWhere = append(postWhere, post.DeadlineEQ(deadline))
 	}
 
-	if deliveryDate := m["deliveryDate"]; deliveryDate != "" {
+	if deliveryDate := m["delivery_date"]; deliveryDate != "" {
 		postWhere = append(postWhere, post.DeliveryDateEQ(deliveryDate))
 	}
 
-	sellerId := m["sellerId"]
+	sellerId := m["seller_id"]
 	if sellerId != "" {
 		postWhere = append(postWhere, post.SellerID(sellerId))
 	}
@@ -98,13 +131,25 @@ func GetPosts(c *fiber.Ctx) error {
 		return fiber.NewError(http.StatusInternalServerError, "Could not query post count")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": fiber.Map{
-			"posts":       posts,
-			"count":       count,
-			"hasNextPage": len(posts) == limit,
+	return c.JSON(getPostsResult{
+		Success: true,
+		Data: getPostsData{
+			Posts:       posts,
+			Count:       count,
+			HasNextPage: len(posts) == limit,
 		},
 	})
+}
+
+type getPostsData struct {
+	Posts       []*ent.Post `json:"posts"`
+	Count       int         `json:"count"`
+	HasNextPage bool        `json:"has_next_page"`
+}
+
+type getPostsResult struct {
+	Success bool         `json:"success"`
+	Data    getPostsData `json:"data"`
 }
 
 func GetPostsByDate(c *fiber.Ctx) error {
@@ -154,6 +199,17 @@ type createPostForm struct {
 	} `json:"items"`
 }
 
+// Create post
+//
+//	@Summary	Create post
+//	@Tags		posts
+//	@Accept		json
+//	@Produce	json
+//	@Param		post	body		createPostForm	true	"Post body"
+//	@Success	200		{object}	PaginationResult{data=Object{posts=[]ent.Post}}
+//	@Failure	500		{object}	utils.HTTPError
+//	@Security	BearerToken
+//	@Router		/admin/v1/posts [post]
 func CreatePost(c *fiber.Ctx) error {
 	postForm := new(createPostForm)
 

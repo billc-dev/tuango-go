@@ -7,7 +7,7 @@ import (
 
 	"github.com/billc-dev/tuango-go/database"
 	"github.com/billc-dev/tuango-go/ent/user"
-	"github.com/billc-dev/tuango-go/handler/seller"
+	"github.com/billc-dev/tuango-go/handlers/seller"
 	"github.com/gofiber/fiber/v2"
 )
 
