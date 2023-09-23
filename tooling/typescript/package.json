@@ -1,0 +1,7 @@
+{
+  "name": "@tuango/tsconfig",
+  "private": true,
+  "files": [
+    "base.json"
+  ]
+}
