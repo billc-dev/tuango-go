@@ -9,38 +9,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/swagger"
-	"github.com/swaggo/swag"
-	"github.com/swaggo/swag/v2/gen"
 
-	_ "github.com/billc-dev/tuango-go/docs"
 	_ "github.com/lib/pq"
 )
 
-// Main
-//
-//	@title						Tuango API
-//	@version					5.0
-//	@BasePath					/api
-//	@securityDefinitions.apikey	BearerToken
-//	@in							header
-//	@name						Authorization
-//	@description				Bearer token
 func main() {
-	err := gen.New().Build(&gen.Config{
-		SearchDir:           "./",
-		MainAPIFile:         "main.go",
-		PropNamingStrategy:  swag.CamelCase,
-		OutputDir:           "./docs",
-		OutputTypes:         []string{"yaml", "json"},
-		ParseDependency:     false,
-		GenerateOpenAPI3Doc: true,
-		ParseVendor:         false,
-	})
-
-	if err != nil {
-		log.Fatalf("Failed to generate swagger.json err: %v", err)
-	}
 
 	client := database.New()
 
@@ -52,8 +25,6 @@ func main() {
 	app.Use(logger.New())
 
 	v1 := app.Group("/api/v1")
-
-	v1.Get("/swagger/*", swagger.HandlerDefault)
 
 	seed := v1.Group("/seed")
 	seed.Get("/all", seedfuncs.SeedAll(client))

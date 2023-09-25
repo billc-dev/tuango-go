@@ -20,8 +20,8 @@ func SetupAdminRoutes(app *fiber.App) {
 	posts.Get("/", AdminAuthenticated, admin.GetPosts)
 	posts.Post("/", AdminAuthenticated, admin.CreatePost)
 	posts.Get("/:id", AdminAuthenticated, admin.GetPost)
-	posts.Put("/:id", AdminAuthenticated, admin.UpdatePost)                               // update post
-	posts.Patch("/:id/deliver/finance", AdminAuthenticated, admin.GetPostFinanceDelivers) // get post finance
+	posts.Put("/:id", AdminAuthenticated, admin.UpdatePost)                             // update post
+	posts.Get("/:id/deliver/finance", AdminAuthenticated, admin.GetPostFinanceDelivers) // get post finance
 	// posts.Patch("/:id/deliver/finance") // update post finance
 	posts.Patch("/:id/status", AdminAuthenticated, admin.UpdatePostStatus) // update post status
 	posts.Get("/date/:date", AdminAuthenticated, admin.GetPostsByDate)

@@ -2,7 +2,6 @@ package admin
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,42 +17,10 @@ import (
 	"github.com/billc-dev/tuango-go/ent/schema"
 	"github.com/billc-dev/tuango-go/ent/user"
 	"github.com/billc-dev/tuango-go/handlers/seller"
+	"github.com/billc-dev/tuango-go/utils"
 	"github.com/gofiber/fiber/v2"
 )
 
-type ResponseHTTP struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data"`
-	Count   int         `json:"count"`
-}
-
-type PaginationResult struct {
-	Success bool `json:"success"`
-	Data    struct {
-		Count       int  `json:"count"`
-		HasNextPage bool `json:"has_next_page"`
-	} `json:"data"`
-}
-
-type Object struct {
-}
-
-// GetPosts
-//
-//	@Summary	Paginate posts
-//	@Tags		posts
-//	@Produce	json
-//	@Param		post_num		query		number		false	"Post number"
-//	@Param		status			query		post.Status	false	"Post status"
-//	@Param		text			query		string		false	"Text"
-//	@Param		deadline		query		string		false	"Deadline"
-//	@Param		delivery_date	query		string		false	"Delivery date"
-//	@Param		seller_id		query		string		false	"Seller ID"
-//	@Param		page			query		number		false	"Page (0-based)"	default(0)
-//	@Success	200				{object}	getPostsResult
-//	@Failure	500				{object}	utils.HTTPError
-//	@Security	BearerToken
-//	@Router		/admin/v1/posts [get]
 func GetPosts(c *fiber.Ctx) error {
 	m := c.Queries()
 
@@ -65,10 +32,8 @@ func GetPosts(c *fiber.Ctx) error {
 
 	if status := post.Status(m["status"]); status != "" {
 		if err := post.StatusValidator(status); err != nil {
-			return fiber.NewError(
-				http.StatusInternalServerError,
-				fmt.Sprintf(`Post status "%v" is not valid`, status),
-			)
+			return utils.Error(err, http.StatusBadRequest,
+				fmt.Sprintf(`Post status "%v" is not valid`, status))
 		}
 		postWhere = append(postWhere, post.StatusEQ(status))
 	}
@@ -120,36 +85,20 @@ func GetPosts(c *fiber.Ctx) error {
 		All(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not query posts")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query posts")
 	}
 
 	count, err := database.DBConn.Post.Query().Where(postWhere...).Count(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not query post count")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query post count")
 	}
 
-	return c.JSON(getPostsResult{
-		Success: true,
-		Data: getPostsData{
-			Posts:       posts,
-			Count:       count,
-			HasNextPage: len(posts) == limit,
-		},
+	return c.JSON(utils.PaginatedResult{
+		Count:   count,
+		HasMore: len(posts) == limit,
+		Data:    posts,
 	})
-}
-
-type getPostsData struct {
-	Posts       []*ent.Post `json:"posts"`
-	Count       int         `json:"count"`
-	HasNextPage bool        `json:"has_next_page"`
-}
-
-type getPostsResult struct {
-	Success bool         `json:"success"`
-	Data    getPostsData `json:"data"`
 }
 
 func GetPostsByDate(c *fiber.Ctx) error {
@@ -157,10 +106,10 @@ func GetPostsByDate(c *fiber.Ctx) error {
 		post.HasPostOrdersWith(order.StatusIn(order.StatusOrdered, order.StatusConfirmed)),
 	}
 
-	if date := c.Params("date"); date == "" {
-		postWhere = append(postWhere, post.DeliveryDate(time.Now().Format("2006-01-02")))
-	} else {
+	if date := c.Params("date"); date != "" {
 		postWhere = append(postWhere, post.DeliveryDate(date))
+	} else {
+		postWhere = append(postWhere, post.DeliveryDate(time.Now().Format("2006-01-02")))
 	}
 
 	posts, err := database.DBConn.Debug().Post.Query().
@@ -172,12 +121,11 @@ func GetPostsByDate(c *fiber.Ctx) error {
 		All(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not query posts")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query posts")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": posts,
+	return c.JSON(utils.Result{
+		Data: posts,
 	})
 
 }
@@ -199,29 +147,16 @@ type createPostForm struct {
 	} `json:"items"`
 }
 
-// Create post
-//
-//	@Summary	Create post
-//	@Tags		posts
-//	@Accept		json
-//	@Produce	json
-//	@Param		post	body		createPostForm	true	"Post body"
-//	@Success	200		{object}	PaginationResult{data=Object{posts=[]ent.Post}}
-//	@Failure	500		{object}	utils.HTTPError
-//	@Security	BearerToken
-//	@Router		/admin/v1/posts [post]
 func CreatePost(c *fiber.Ctx) error {
 	postForm := new(createPostForm)
 
 	if err := c.BodyParser(postForm); err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusBadRequest, "Could not parse order form")
+		return utils.Error(err, http.StatusBadRequest, "Could not parse order form")
 	}
 
 	tx, err := database.DBConn.Debug().Tx(c.Context())
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not start transaction")
+		return utils.Error(err, http.StatusInternalServerError, "Could not start transaction")
 	}
 
 	if postForm.PostNum != 0 {
@@ -235,12 +170,11 @@ func CreatePost(c *fiber.Ctx) error {
 			First(c.Context())
 
 		if err != nil {
-			log.Print(err)
-			return fiber.NewError(http.StatusInternalServerError, "Could not query previous post")
+			return utils.Error(err, http.StatusInternalServerError, "Could not query previous post")
 		}
 
 		if *post.PostNum != 0 {
-			return fiber.NewError(http.StatusBadRequest, "PostNum is duplicated")
+			return utils.Error(nil, http.StatusBadRequest, "PostNum is duplicated")
 		}
 	} else {
 		previousPost, err := database.DBConn.Post.Query().
@@ -250,8 +184,7 @@ func CreatePost(c *fiber.Ctx) error {
 			First(c.Context())
 
 		if err != nil {
-			log.Print(err)
-			return fiber.NewError(http.StatusInternalServerError, "Could not query previous post")
+			return utils.Error(err, http.StatusInternalServerError, "Could not query previous post")
 		}
 
 		postForm.PostNum = *previousPost.PostNum + 1
@@ -270,17 +203,14 @@ func CreatePost(c *fiber.Ctx) error {
 		Save(c.Context())
 
 	if err != nil {
-		log.Print(err)
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "Could not create post")
+		return utils.Error(err, http.StatusInternalServerError, "Could not create post")
 	}
 
 	if len(postForm.Items) > len(seller.Alphabets) {
 		tx.Rollback()
-		return fiber.NewError(
-			http.StatusInternalServerError,
-			fmt.Sprintf("Post items length is more than %v", len(seller.Alphabets)),
-		)
+		return utils.Error(err, http.StatusInternalServerError,
+			fmt.Sprintf("Post items length is more than %v", len(seller.Alphabets)))
 	}
 
 	postItems := []*ent.PostItemCreate{}
@@ -298,24 +228,42 @@ func CreatePost(c *fiber.Ctx) error {
 
 	if len(postItems) == 0 {
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "No post items to create")
+		return utils.Error(nil, http.StatusBadRequest, "No post items to create")
 	}
 
 	err = tx.PostItem.CreateBulk(postItems...).Exec(c.Context())
 	if err != nil {
-		log.Print(err)
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "Could not create post")
+		return utils.Error(err, http.StatusInternalServerError, "Could not create post")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not commit transaction")
+		return utils.Error(err, http.StatusInternalServerError, "Could not commit transaction")
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
+	newPost, err = database.DBConn.Post.
+		Query().
+		Select(
+			post.FieldTitle, post.FieldBody,
+			post.FieldStorageType, post.FieldDeadline, post.FieldDeliveryDate,
+			post.FieldIsInStock, post.FieldImages,
+		).
+		Where(post.ID(newPost.ID)).
+		WithSeller(func(uq *ent.UserQuery) {
+			uq.Select(user.FieldDisplayName, user.FieldPictureURL)
+		}).
+		WithPostItems(func(piq *ent.PostItemQuery) {
+			piq.Order(postitem.ByIdentifier())
+		}).
+		First(c.Context())
+
+	if err != nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not query post")
+	}
+
+	return c.JSON(utils.Result{
+		Data: newPost,
 	})
 }
 
@@ -341,14 +289,12 @@ func UpdatePost(c *fiber.Ctx) error {
 	postForm := new(updatePostForm)
 
 	if err := c.BodyParser(postForm); err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusBadRequest, "Could not parse order form")
+		return utils.Error(err, http.StatusBadRequest, "Could not parse order form")
 	}
 
 	tx, err := database.DBConn.Debug().Tx(c.Context())
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not start transaction")
+		return utils.Error(err, http.StatusInternalServerError, "Could not start transaction")
 	}
 
 	err = tx.Post.UpdateOneID(postID).
@@ -362,15 +308,13 @@ func UpdatePost(c *fiber.Ctx) error {
 		Exec(c.Context())
 
 	if err != nil {
-		log.Print(err)
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "Could not update post")
+		return utils.Error(err, http.StatusInternalServerError, "Could not update post")
 	}
 
 	postItems := []*ent.PostItemCreate{}
 
 	for index, item := range postForm.Items {
-		log.Print(item)
 		if item.ID != "" {
 			err := tx.PostItem.UpdateOneID(item.ID).
 				SetName(item.Name).
@@ -378,9 +322,8 @@ func UpdatePost(c *fiber.Ctx) error {
 				SetStock(item.Stock).
 				Exec(c.Context())
 			if err != nil {
-				log.Print(err)
 				tx.Rollback()
-				return fiber.NewError(http.StatusInternalServerError, "Could not update post item")
+				return utils.Error(err, http.StatusInternalServerError, "Could not update post item")
 			}
 			continue
 		}
@@ -396,18 +339,38 @@ func UpdatePost(c *fiber.Ctx) error {
 
 	err = tx.PostItem.CreateBulk(postItems...).Exec(c.Context())
 	if err != nil {
-		log.Print(err)
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "Could not create post")
+		return utils.Error(err, http.StatusInternalServerError, "Could not create post")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not commit transaction")
+		return utils.Error(err, http.StatusInternalServerError, "Could not commit transaction")
 	}
 
-	return c.JSON(fiber.Map{})
+	newPost, err := database.DBConn.Post.
+		Query().
+		Select(
+			post.FieldTitle, post.FieldBody,
+			post.FieldStorageType, post.FieldDeadline, post.FieldDeliveryDate,
+			post.FieldIsInStock, post.FieldImages,
+		).
+		Where(post.ID(postID)).
+		WithSeller(func(uq *ent.UserQuery) {
+			uq.Select(user.FieldDisplayName, user.FieldPictureURL)
+		}).
+		WithPostItems(func(piq *ent.PostItemQuery) {
+			piq.Order(postitem.ByIdentifier())
+		}).
+		First(c.Context())
+
+	if err != nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not query post")
+	}
+
+	return c.JSON(utils.Result{
+		Data: newPost,
+	})
 }
 
 func GetPost(c *fiber.Ctx) error {
@@ -430,12 +393,11 @@ func GetPost(c *fiber.Ctx) error {
 		First(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Post not found")
+		return utils.Error(err, http.StatusInternalServerError, "Post not found")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": p,
+	return c.JSON(utils.Result{
+		Data: p,
 	})
 }
 
@@ -453,12 +415,11 @@ func GetPostFinanceDelivers(c *fiber.Ctx) error {
 		Where(deliver.PostID(postID)).All(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not query delivers")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query delivers")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": d,
+	return c.JSON(utils.Result{
+		Data: d,
 	})
 }
 
@@ -472,15 +433,12 @@ func UpdatePostStatus(c *fiber.Ctx) error {
 	postForm := new(updatePostStatusForm)
 
 	if err := c.BodyParser(postForm); err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusBadRequest, "Could not parse order form")
+		return utils.Error(err, http.StatusBadRequest, "Could not parse order form")
 	}
 
 	if err := post.StatusValidator(postForm.Status); err != nil {
-		return fiber.NewError(
-			http.StatusInternalServerError,
-			fmt.Sprintf(`Post status "%v" is not valid`, postForm.Status),
-		)
+		return utils.Error(err, http.StatusBadRequest,
+			fmt.Sprintf(`Post status "%v" is not valid`, postForm.Status))
 	}
 
 	err := database.DBConn.Post.
@@ -489,11 +447,10 @@ func UpdatePostStatus(c *fiber.Ctx) error {
 		Exec(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not update post status")
+		return utils.Error(err, http.StatusInternalServerError, "Could not update post status")
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
+	return c.JSON(utils.Result{
+		Data: postForm.Status,
 	})
 }
