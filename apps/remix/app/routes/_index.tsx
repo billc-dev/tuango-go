@@ -16,9 +16,9 @@ import {
 import { DatesProvider } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { randomId } from "@mantine/hooks";
+import type { MetaFunction } from "@remix-run/node";
 import dayjs from "dayjs";
 
-import type { MetaFunction } from "@remix-run/node";
 import { DatePicker } from "~/components/DatePicker";
 
 export const meta: MetaFunction = () => [{ title: "開心團購" }];
@@ -99,9 +99,7 @@ export default function Index() {
           <Fragment key={item.key}>
             <TextInput
               autoFocus={index > 0}
-              label={`${String.fromCharCode(
-                "A".charCodeAt(0) + index,
-              )}. 商品名稱`}
+              label={`${String.fromCharCode("A".charCodeAt(0) + index)}. 商品名稱`}
               placeholder="商品名稱"
               size="md"
               required
