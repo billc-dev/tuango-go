@@ -37,3 +37,7 @@ air
 seeds/
 tmp/
 vendor/
+
+# terraform
+terraform.tfvars
+.terraform
