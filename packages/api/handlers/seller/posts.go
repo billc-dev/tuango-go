@@ -1,6 +1,7 @@
 package seller
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,13 +9,18 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/billc-dev/tuango-go/database"
 	"github.com/billc-dev/tuango-go/ent"
 	"github.com/billc-dev/tuango-go/ent/order"
 	"github.com/billc-dev/tuango-go/ent/post"
 	"github.com/billc-dev/tuango-go/ent/predicate"
 	"github.com/billc-dev/tuango-go/ent/schema"
+	"github.com/billc-dev/tuango-go/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 var Alphabets = strings.Split("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "")
@@ -336,5 +342,33 @@ func ClosePost(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success": true,
+	})
+}
+
+func GetPresignedUploadURL(c *fiber.Ctx) error {
+	u, ok := c.Locals("user").(*ent.User)
+	if !ok {
+		return fiber.NewError(http.StatusNotFound, "User not found")
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Print(err)
+		return utils.Error(err, http.StatusInternalServerError, "Could not load config")
+	}
+
+	presigner := utils.Presigner{PresignClient: s3.NewPresignClient(s3.NewFromConfig(cfg))}
+
+	presignedGetRequest, err := presigner.PutObject(
+		"tuango-image-1",
+		fmt.Sprintf("%v/%v", u.ID, uuid.New()),
+		600,
+	)
+	if err != nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not create presigned URL")
+	}
+
+	return c.JSON(utils.Result{
+		Data: presignedGetRequest.URL,
 	})
 }

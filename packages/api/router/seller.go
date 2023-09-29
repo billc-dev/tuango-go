@@ -15,10 +15,11 @@ func SetupSellerRoutes(app *fiber.App) {
 	v1 := app.Group("/api/seller/v1")
 
 	posts := v1.Group("/posts")
-	posts.Get("/", SellerAuthenticated, seller.GetPosts)             // get seller posts => query status
-	posts.Post("/", SellerAuthenticated, seller.CreatePost)          // create post
-	posts.Put("/:id", SellerAuthenticated, seller.UpdatePost)        // update post
-	posts.Patch("/:id/close", SellerAuthenticated, seller.ClosePost) // update post status to closed
+	posts.Get("/", SellerAuthenticated, seller.GetPosts)                   // get seller posts => query status
+	posts.Post("/", SellerAuthenticated, seller.CreatePost)                // create post
+	posts.Put("/image", SellerAuthenticated, seller.GetPresignedUploadURL) // update post status to closed
+	posts.Put("/:id", SellerAuthenticated, seller.UpdatePost)              // update post
+	posts.Patch("/:id/close", SellerAuthenticated, seller.ClosePost)       // update post status to closed
 
 	// orders := v1.Group("/orders")
 	// orders.Patch("/:id", SellerAuthenticated, seller.SetHasName)
