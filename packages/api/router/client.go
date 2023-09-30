@@ -26,6 +26,7 @@ func SetupClientRoutes(app *fiber.App) {
 	user.Get("/delivered-order-count", ClientAuthenticated, client.GetDeliveredOrderCount) // get delivered order count
 	// user.Get("/notification-count")    // get notification count
 	user.Get("/rooms", ClientAuthenticated, client.GetRooms)
+	user.Post("/login/line/:code", client.LineLogin)
 
 	posts := v1.Group("/posts")
 	posts.Get("/", client.GetPosts) // get posts => query postNum, status, title, dates

@@ -1,10 +1,13 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -19,8 +22,9 @@ import (
 	"github.com/billc-dev/tuango-go/ent/room"
 	"github.com/billc-dev/tuango-go/ent/roomuser"
 	"github.com/billc-dev/tuango-go/ent/user"
+	"github.com/billc-dev/tuango-go/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt"
 )
 
 func GetUser(c *fiber.Ctx) error {
@@ -59,6 +63,68 @@ func Login() error {
 	}
 	log.Print(accessString)
 	return nil
+}
+
+type lineLoginResponse struct {
+	IDToken string `json:"id_token"`
+}
+
+type MyCustomClaims struct {
+	LineID  string `json:"sub"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
+	jwt.StandardClaims
+}
+
+func LineLogin(c *fiber.Ctx) error {
+	code := c.Params("code")
+	m := c.Queries()
+	// log.Print(m["redirect_uri"])
+
+	payload := strings.NewReader(fmt.Sprintf(
+		"grant_type=authorization_code&code=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
+		code, "1654947889", "7c5d36284f09fad398d14d5cde0dee10", m["redirect_uri"],
+	),
+	)
+	// buf := new(bytes.Buffer)
+	// buf.ReadFrom(payload)
+	// str := buf.String()
+	// fmt.Println(str)
+	req, err := http.NewRequest(http.MethodPost, "https://api.line.me/oauth2/v2.1/token", payload)
+	if err != nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not create request")
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return utils.Error(err, http.StatusBadRequest, "Could not get profile")
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not read body")
+	}
+
+	data := lineLoginResponse{}
+	json.Unmarshal(body, &data)
+
+	token, _ := jwt.ParseWithClaims(data.IDToken, &MyCustomClaims{}, nil)
+
+	if token == nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not parse line id_token")
+	}
+
+	claims := token.Claims.(*MyCustomClaims)
+
+	return c.JSON(utils.Result{
+		Data: map[string]string{
+			"LineID":  claims.LineID,
+			"Name":    claims.Name,
+			"Picture": claims.Picture,
+		},
+	})
 }
 
 func GetLikes(c *fiber.Ctx) error {
@@ -262,30 +328,4 @@ func GetRooms(c *fiber.Ctx) error {
 			"hasNextPage": len(rooms) == limit,
 		},
 	})
-}
-
-func limitRows(partitionBy string, limit int, orderBy ...string) func(s *sql.Selector) {
-	return func(s *sql.Selector) {
-		d := sql.Dialect(s.Dialect())
-		s.SetDistinct(false)
-		if len(orderBy) == 0 {
-			orderBy = append(orderBy, "id")
-		}
-		with := d.With("src_query").
-			As(s.Clone()).
-			With("limited_query").
-			As(
-				d.Select("*").
-					AppendSelectExprAs(
-						sql.RowNumber().PartitionBy(partitionBy).OrderBy(orderBy...),
-						"row_number",
-					).
-					From(d.Table("src_query")),
-			)
-		t := d.Table("limited_query").As(s.TableName())
-		*s = *d.Select(s.UnqualifiedColumns()...).
-			From(t).
-			Where(sql.LTE(t.C("row_number"), limit)).
-			Prefix(with)
-	}
 }

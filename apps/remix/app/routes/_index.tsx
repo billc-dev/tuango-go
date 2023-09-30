@@ -46,6 +46,12 @@ export default function Index() {
   return (
     <main>
       <div className="space-y-2">
+        <Button
+          component="a"
+          href={`https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=1654947889&redirect_uri=http://localhost:3000/login/line&state=${randomId()}&scope=profile%20openid`}
+        >
+          Login
+        </Button>
         <TextInput
           label="團購主題"
           placeholder="團購主題"
