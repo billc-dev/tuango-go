@@ -7,14 +7,12 @@
     "format": "prettier --check \"**/*.{mjs,ts,md,json}\"",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@ianvs/prettier-plugin-sort-imports": "4.1.0",
-    "prettier": "3.0.3",
-    "prettier-plugin-tailwindcss": "0.5.4"
-  },
   "devDependencies": {
     "@tuango/tsconfig": "workspace:*",
     "@types/node": "20.6.3",
+    "@ianvs/prettier-plugin-sort-imports": "4.1.0",
+    "prettier": "3.0.3",
+    "prettier-plugin-tailwindcss": "0.5.4",
     "typescript": "5.2.2"
   },
   "prettier": "@tuango/prettier-config"
