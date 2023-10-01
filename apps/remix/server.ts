@@ -16,6 +16,7 @@ run();
 
 async function run() {
   const BUILD_PATH = path.resolve("build/index.js");
+  const VERSION_PATH = path.resolve("build/version.txt");
   const initialBuild = await reimportServer();
 
   const app = express();
@@ -83,7 +84,7 @@ async function run() {
     }
     const chokidar = await import("chokidar");
     chokidar
-      .watch(BUILD_PATH, { ignoreInitial: true })
+      .watch(VERSION_PATH, { ignoreInitial: true })
       .on("add", handleServerUpdate)
       .on("change", handleServerUpdate);
 

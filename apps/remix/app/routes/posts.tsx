@@ -1,46 +1,101 @@
-import { useLoaderData } from "@remix-run/react";
-import { useQuery } from "@tanstack/react-query";
+import { Fragment } from "react";
+import type { LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import type { ShouldRevalidateFunction } from "@remix-run/react";
+import { dehydrate, QueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import InfiniteScroll from "react-infinite-scroll-component";
 
-export async function loader() {
-  // const { data, error } = await serverClient.GET("/api/admin/v1/posts", {
-  //   headers: {
-  //     Authorization: "Bearer asdfasdf",
-  //   },
-  // });
-  // if (error) {
-  //   throw new Error(error.message);
-  // }
-  // return { postsData: data.data };
-}
+import { Modal } from "~/components/Modal";
+import { PostCard } from "~/components/PostCard";
+import { client } from "~/utils/api";
+
+export const shouldRevalidate: ShouldRevalidateFunction = () => {
+  return false;
+};
+
+export const loader = async (req: LoaderFunctionArgs) => {
+  const queryClient = new QueryClient();
+
+  const post_id = new URL(req.request.url).searchParams.get("post_id");
+
+  if (post_id) {
+    await queryClient.prefetchQuery({
+      queryKey: ["post", post_id],
+      queryFn: async () => {
+        const { data, error } = await client.GET("/api/client/v1/posts/{id}", {
+          params: {
+            path: {
+              id: post_id,
+            },
+          },
+        });
+        if (error) {
+          throw new Error(error.message);
+        }
+        return { ...data };
+      },
+    });
+  } else {
+    await queryClient.prefetchInfiniteQuery({
+      queryKey: ["posts"],
+      queryFn: async ({ pageParam }) => {
+        const { data, error } = await client.GET("/api/client/v1/posts", {
+          params: {
+            query: {
+              page: pageParam,
+            },
+          },
+        });
+        if (error) {
+          throw new Error(error.message);
+        }
+        return { ...data };
+      },
+      initialPageParam: 0,
+    });
+  }
+
+  return json({ dehydratedState: dehydrate(queryClient) });
+};
 
 export default function Route() {
-  const { postsData } = useLoaderData<typeof loader>();
-  //   const revalidator = useRevalidator();
-
-  const query = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+  const query = useInfiniteQuery({
+    initialPageParam: 0,
     queryKey: ["posts"],
-    initialData: postsData,
-    queryFn: async () => {
-      // const { data, error } = await client.GET("/api/admin/v1/posts", {});
-      // if (error) {
-      //   throw new Error(error.message);
-      // }
-      // return data.data;
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await client.GET("/api/client/v1/posts", {
+        params: {
+          query: {
+            page: pageParam,
+          },
+        },
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+      return { ...data };
     },
-    // refetchInterval: 1000 * 5,
-    gcTime: 1000,
-    staleTime: 1000,
+    getNextPageParam: (_, pages) => pages.length,
   });
 
   return (
-    <div>
-      {/* <Button onClick={() => revalidator.revalidate()}>Revalidate</Button> */}
-      {/* {query.data?.posts?.map((post) => (
-        <div key={post.id}>
-          #{post.post_num} {post.title} {post.seller.display_name}
-        </div>
-      ))} */}
-    </div>
+    <InfiniteScroll
+      scrollableTarget="infiniteScrollTarget"
+      className="flex w-full select-none flex-col items-center pb-16"
+      loader={<div>loading</div>}
+      next={() => query.fetchNextPage()}
+      hasMore={query.hasNextPage}
+      dataLength={query.data?.pages.reduce((sum, page) => (page.data?.length ?? 0) + sum, 0) || 0}
+    >
+      {/* <Button onClick={open}>Open</Button> */}
+      <div className="mb-2 grid grid-cols-2 gap-2 p-2 pb-0 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {query.data?.pages.map((page, index) => (
+          <Fragment key={index}>
+            {page.data?.map((post) => <PostCard key={post.id} post={post} />)}
+          </Fragment>
+        ))}
+      </div>
+      <Modal />
+    </InfiniteScroll>
   );
 }
