@@ -2,20 +2,48 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/billc-dev/tuango-go/database"
 	"github.com/billc-dev/tuango-go/router"
 	seedfuncs "github.com/billc-dev/tuango-go/seedFuncs"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
 	"github.com/joho/godotenv"
+	"github.com/swaggo/swag"
+	"github.com/swaggo/swag/v2/gen"
 
+	_ "github.com/billc-dev/tuango-go/docs"
 	_ "github.com/lib/pq"
 )
 
+// Main
+//
+//	@title						Tuango API
+//	@securityDefinitions.apikey	BearerToken
+//	@in							header
+//	@name						Authorization
+//	@description				Bearer token
 func main() {
 	godotenv.Load()
+
+	err := gen.New().Build(&gen.Config{
+		SearchDir:           "./",
+		MainAPIFile:         "main.go",
+		PropNamingStrategy:  swag.CamelCase,
+		OutputDir:           "./docs",
+		OutputTypes:         []string{"yaml", "json"},
+		ParseDependency:     false,
+		ParseVendor:         false,
+		GenerateOpenAPI3Doc: true,
+	})
+
+	if err != nil {
+		log.Fatalf("Failed to generate swagger.json err: %v", err)
+	}
 
 	client := database.New()
 
@@ -25,8 +53,24 @@ func main() {
 
 	app.Use(recover.New())
 	app.Use(logger.New())
+	app.Use(cors.New())
+
+	app.Use(cors.New(cors.Config{
+		AllowOriginsFunc: func(origin string) bool {
+			return os.Getenv("ENVIRONMENT") == "development"
+		},
+	}))
 
 	v1 := app.Group("/api/v1")
+
+	// v1.Get("/swagger/*", swagger.HandlerDefault)
+
+	v1.Get("/swagger/*", swagger.New(swagger.Config{ // custom
+		DeepLinking:              true,
+		DefaultModelsExpandDepth: -1,
+		DocExpansion:             "list",
+		PersistAuthorization:     true,
+	}))
 
 	seed := v1.Group("/seed")
 	seed.Get("/all", seedfuncs.SeedAll(client))

@@ -21,6 +21,22 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// GetPosts
+//
+//	@Summary	Paginate posts
+//	@Tags		admin/posts
+//	@Produce	json
+//	@Param		post_num		query		number		false	"Post number"
+//	@Param		status			query		post.Status	false	"Post status"
+//	@Param		text			query		string		false	"Text"
+//	@Param		deadline		query		string		false	"Deadline"
+//	@Param		delivery_date	query		string		false	"Delivery date"
+//	@Param		seller_id		query		string		false	"Seller ID"
+//	@Param		page			query		number		false	"Page (0-based)"	default(0)
+//	@Success	200				{object}	string
+//	@Failure	500				{object}	string
+//	@Security	BearerToken
+//	@Router		/api/admin/v1/posts [get]
 func GetPosts(c *fiber.Ctx) error {
 	m := c.Queries()
 
@@ -61,8 +77,7 @@ func GetPosts(c *fiber.Ctx) error {
 	limit := 20
 	page := 0
 
-	pageInt, err := strconv.Atoi(m["page"])
-	if err == nil {
+	if pageInt, err := strconv.Atoi(m["page"]); err == nil {
 		page = int(pageInt)
 	}
 
@@ -94,7 +109,7 @@ func GetPosts(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Could not query post count")
 	}
 
-	return c.JSON(utils.PaginatedResult{
+	return c.JSON(utils.PaginatedResult[*ent.Post]{
 		Count:   count,
 		HasMore: len(posts) == limit,
 		Data:    posts,
@@ -147,6 +162,17 @@ type createPostForm struct {
 	} `json:"items"`
 }
 
+// Create post
+//
+//	@Summary	Create post
+//	@Tags		admin/posts
+//	@Accept		json
+//	@Produce	json
+//	@Param		post	body		createPostForm	true	"Post body"
+//	@Success	200		{object}	string
+//	@Failure	500		{object}	string
+//	@Security	BearerToken
+//	@Router		/api/admin/v1/posts [post]
 func CreatePost(c *fiber.Ctx) error {
 	postForm := new(createPostForm)
 

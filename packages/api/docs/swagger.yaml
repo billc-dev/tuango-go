@@ -1,0 +1,425 @@
+components:
+  schemas:
+    admin.createPostForm:
+      properties:
+        body:
+          type: string
+        deadline:
+          type: string
+        delivery_date:
+          type: string
+        images:
+          items:
+            $ref: '#/components/schemas/schema.Image'
+          type: array
+          uniqueItems: false
+        is_in_stock:
+          type: boolean
+        items:
+          items:
+            properties:
+              name:
+                type: string
+              price:
+                type: number
+              stock:
+                type: number
+            type: object
+          type: array
+          uniqueItems: false
+        post_num:
+          type: integer
+        seller_id:
+          type: string
+        storage_type:
+          $ref: '#/components/schemas/post.StorageType'
+        title:
+          type: string
+      type: object
+    client.normalPost:
+      properties:
+        body:
+          type: string
+        comment_count:
+          type: integer
+        created_at:
+          type: string
+        deadline:
+          type: string
+        delivery_date:
+          type: string
+        id:
+          type: string
+        images:
+          items:
+            $ref: '#/components/schemas/schema.Image'
+          type: array
+          uniqueItems: false
+        like_count:
+          type: integer
+        order_count:
+          type: integer
+        post_items:
+          items:
+            $ref: '#/components/schemas/ent.PostItem'
+          type: array
+          uniqueItems: false
+        post_num:
+          type: integer
+        seller:
+          properties:
+            display_name:
+              type: string
+            id:
+              type: string
+            picture_url:
+              type: string
+          type: object
+        seller_id:
+          type: string
+        status:
+          type: string
+          x-enum-varnames:
+          - DefaultStatus
+          - StatusOpen
+          - StatusClosed
+          - StatusCompleted
+          - StatusCanceled
+        storage_type:
+          type: string
+          x-enum-varnames:
+          - StorageTypeRoomTemp
+          - StorageTypeFarmGoods
+          - StorageTypeRefrigerated
+          - StorageTypeFrozen
+        title:
+          type: string
+      type: object
+    client.paginatedPost:
+      properties:
+        body:
+          type: string
+        comment_count:
+          type: integer
+        created_at:
+          type: string
+        deadline:
+          type: string
+        delivery_date:
+          type: string
+        id:
+          type: string
+        images:
+          items:
+            $ref: '#/components/schemas/schema.Image'
+          type: array
+          uniqueItems: false
+        like_count:
+          type: integer
+        order_count:
+          type: integer
+        post_items:
+          items:
+            $ref: '#/components/schemas/ent.PostItem'
+          type: array
+          uniqueItems: false
+        post_num:
+          type: integer
+        seller:
+          properties:
+            display_name:
+              type: string
+            id:
+              type: string
+            picture_url:
+              type: string
+          type: object
+        seller_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/post.Status'
+        storage_type:
+          type: string
+          x-enum-varnames:
+          - StorageTypeRoomTemp
+          - StorageTypeFarmGoods
+          - StorageTypeRefrigerated
+          - StorageTypeFrozen
+        title:
+          type: string
+      type: object
+    data:
+      properties:
+        data:
+          $ref: '#/components/schemas/client.normalPost'
+      type: object
+    ent.PostItem:
+      properties:
+        id:
+          description: ID of the ent.
+          type: string
+        identifier:
+          description: Identifier holds the value of the "identifier" field.
+          type: string
+        name:
+          description: Name holds the value of the "name" field.
+          type: string
+        post_id:
+          description: PostID holds the value of the "post_id" field.
+          type: string
+        price:
+          description: Price holds the value of the "price" field.
+          type: number
+        stock:
+          description: Stock holds the value of the "stock" field.
+          type: number
+      type: object
+    post.Status:
+      type: string
+      x-enum-varnames:
+      - DefaultStatus
+      - StatusOpen
+      - StatusClosed
+      - StatusCompleted
+      - StatusCanceled
+    post.StorageType:
+      type: string
+      x-enum-varnames:
+      - StorageTypeRoomTemp
+      - StorageTypeFarmGoods
+      - StorageTypeRefrigerated
+      - StorageTypeFrozen
+    schema.Image:
+      properties:
+        lg:
+          type: string
+        md:
+          type: string
+        sm:
+          type: string
+      type: object
+    utils.HTTPError:
+      properties:
+        code:
+          example: 400
+          type: integer
+        message:
+          example: status bad request
+          type: string
+      type: object
+    utils.PaginatedResult-client_paginatedPost:
+      properties:
+        count:
+          type: integer
+        data:
+          items:
+            $ref: '#/components/schemas/client.paginatedPost'
+          type: array
+          uniqueItems: false
+        has_more:
+          type: boolean
+      type: object
+    utils.Result:
+      allOf:
+      - $ref: '#/components/schemas/data'
+      properties:
+        data: {}
+      type: object
+  securitySchemes:
+    "":
+      description: Bearer token
+      in: header
+      name: Authorization
+      type: apiKey
+externalDocs:
+  description: ""
+  url: ""
+info:
+  title: Tuango API
+  version: ""
+openapi: 3.1.0
+paths:
+  /api/admin/v1/posts:
+    get:
+      parameters:
+      - description: Post number
+        in: query
+        name: post_num
+        schema:
+          type: number
+      - description: Post status
+        in: query
+        name: status
+        schema:
+          enum:
+          - open
+          - open
+          - closed
+          - completed
+          - canceled
+          type: string
+      - description: Text
+        in: query
+        name: text
+        schema:
+          type: string
+      - description: Deadline
+        in: query
+        name: deadline
+        schema:
+          type: string
+      - description: Delivery date
+        in: query
+        name: delivery_date
+        schema:
+          type: string
+      - description: Seller ID
+        in: query
+        name: seller_id
+        schema:
+          type: string
+      - description: Page (0-based)
+        in: query
+        name: page
+        schema:
+          default: 0
+          type: number
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
+      security:
+      - BearerToken: []
+      summary: Paginate posts
+      tags:
+      - admin/posts
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/admin.createPostForm'
+        description: Post body
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
+      security:
+      - BearerToken: []
+      summary: Create post
+      tags:
+      - admin/posts
+  /api/client/v1/posts:
+    get:
+      parameters:
+      - description: Post number
+        in: query
+        name: post_num
+        schema:
+          type: number
+      - description: Post status
+        in: query
+        name: status
+        schema:
+          enum:
+          - open
+          - open
+          - closed
+          - completed
+          - canceled
+          type: string
+      - description: Text
+        in: query
+        name: text
+        schema:
+          type: string
+      - description: Deadline
+        in: query
+        name: deadline
+        schema:
+          type: string
+      - description: Delivery date
+        in: query
+        name: delivery_date
+        schema:
+          type: string
+      - description: Seller ID
+        in: query
+        name: seller_id
+        schema:
+          type: string
+      - description: Page (0-based)
+        in: query
+        name: page
+        schema:
+          default: 0
+          type: number
+      - description: Include post body
+        in: query
+        name: include_post_body
+        schema:
+          type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.PaginatedResult-client_paginatedPost'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.HTTPError'
+          description: Internal Server Error
+      summary: Paginate posts
+      tags:
+      - client/posts
+  /api/client/v1/posts/{id}:
+    get:
+      parameters:
+      - description: Post ID
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/data'
+                properties:
+                  data: {}
+                type: object
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.HTTPError'
+          description: Internal Server Error
+      summary: Get post
+      tags:
+      - client/post
