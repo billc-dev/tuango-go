@@ -1,10 +1,11 @@
+import { Link } from "@remix-run/react";
 import clsx from "clsx";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import type { components } from "types/schema";
 
 import "react-lazy-load-image-component/src/effects/opacity.css";
 
-import { Link } from "@remix-run/react";
+import LikeButton from "./LikeButton";
 
 interface PostCardInterface {
   post: components["schemas"]["client.paginatedPost"];
@@ -28,8 +29,8 @@ export const PostCard: React.FC<PostCardInterface> = ({ post }) => {
             <div className="w-auto truncate">{`$${getProductPriceRange(post.post_items)}`}</div>
           </div>
         </Link>
-        <div className="flex justify-between py-1">
-          {/* <LikeButton postId={post._id} /> */}
+        <div className="flex items-center justify-between py-1">
+          <LikeButton postId={post?.id ?? ""} />
           <Link
             aria-label="orderCount"
             className="cursor-pointer truncate"

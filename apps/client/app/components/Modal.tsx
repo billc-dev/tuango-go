@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
-import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeftIcon,
+  ChatBubbleLeftEllipsisIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClipboardDocumentListIcon,
+} from "@heroicons/react/24/outline";
 import { Carousel } from "@mantine/carousel";
 import { ActionIcon, Avatar, Modal as MantineModal } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useSearchParams } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
 // import Lightbox from "react-image-lightbox";
@@ -24,6 +30,12 @@ import { date, getFullDateFromNow } from "~/utils/date";
 import { getStorageTypeLabel } from "~/utils/text";
 
 import "react-lazy-load-image-component/src/effects/opacity.css";
+
+import nProgress from "nprogress";
+
+import LikeButton from "./LikeButton";
+import TabButton from "./TabButton";
+import TabContainer from "./TabContainer";
 
 export const Modal = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,11 +61,31 @@ export const Modal = () => {
         },
       });
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error);
       }
       return { ...data };
     },
   });
+
+  let progressBarTimeout = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    const startProgressBar = () => {
+      clearTimeout(progressBarTimeout.current);
+      progressBarTimeout.current = setTimeout(nProgress.start, 200);
+    };
+
+    const stopProgressBar = () => {
+      clearTimeout(progressBarTimeout.current);
+      nProgress.done();
+    };
+
+    if (query.isLoading) {
+      startProgressBar();
+    } else {
+      stopProgressBar();
+    }
+  }, [query.isLoading]);
 
   useEffect(() => {
     if (query.data?.data) {
@@ -69,15 +101,19 @@ export const Modal = () => {
   const [imageIndex, setImageIndex] = useState(0);
   const [openLightbox, setOpenLightbox] = useState(false);
 
+  const isMobile = useMediaQuery("(max-width: 50em)");
+
+  const [action, setAction] = useState("order");
+
   return (
     <MantineModal.Root
       opened={opened}
       onClose={close}
-      fullScreen
+      fullScreen={isMobile}
       radius={0}
-      // transitionProps={{
-      //   transition: "fade",
-      // }}
+      transitionProps={{
+        transition: "fade",
+      }}
     >
       <MantineModal.Overlay />
       <MantineModal.Content>
@@ -105,7 +141,6 @@ export const Modal = () => {
           <Carousel
             className="relative -mx-4 mt-2"
             onSlideChange={(index) => setImageIndex(index)}
-            // loop
             withIndicators
             speed={30}
             height={300}
@@ -141,23 +176,6 @@ export const Modal = () => {
               }))}
               index={imageIndex}
               plugins={[Counter, Thumbnails, Zoom]}
-
-              // reactModalProps={{
-              //   isOpen: openLightbox,
-              //   className: openLightbox ? "" : "pointer-events-none",
-              // }}
-              // mainSrc={post?.images?.[imageIndex].md ?? ""}
-              // nextSrc={post?.images?.[(imageIndex + 1) % post?.images?.length].md}
-              // prevSrc={
-              //   post?.images?.[(imageIndex + post?.images?.length - 1) % post?.images?.length].md
-              // }
-              // onCloseRequest={() => setOpenLightbox(false)}
-              // onMovePrevRequest={() =>
-              //   setImageIndex(
-              //     (imageIndex + (post?.images?.length ?? 1) - 1) % (post?.images?.length ?? 1),
-              //   )
-              // }
-              // onMoveNextRequest={() => setImageIndex((imageIndex + 1) % (post?.images?.length ?? 1))}
             />
           )}
           <div className={`py-4`}>
@@ -169,6 +187,23 @@ export const Modal = () => {
             <p>儲存方式: {getStorageTypeLabel(post?.storage_type)}</p>
             <p className={`whitespace-pre-line pt-4`}>{post?.body?.trim()}</p>
           </div>
+          <TabContainer>
+            <LikeButton tabButton postId={post?.id ?? ""} likeCount={post?.like_count} />
+            <TabButton
+              icon={<ChatBubbleLeftEllipsisIcon />}
+              selected={action === "comment"}
+              onClick={() => setAction("comment")}
+            >
+              {post?.comment_count} 問與答
+            </TabButton>
+            <TabButton
+              icon={<ClipboardDocumentListIcon />}
+              selected={action === "order"}
+              onClick={() => setAction("order")}
+            >
+              {post?.status !== "completed" && post?.order_count} 訂單
+            </TabButton>
+          </TabContainer>
         </MantineModal.Body>
       </MantineModal.Content>
     </MantineModal.Root>

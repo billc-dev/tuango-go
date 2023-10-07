@@ -92,13 +92,13 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": components["schemas"]["utils.PaginatedResult-client_paginatedPost"];
+            "application/json": components["schemas"]["utils.InfinitePaginatedResult-client_paginatedPost"];
           };
         };
         /** @description Internal Server Error */
         500: {
           content: {
-            "application/json": components["schemas"]["utils.HTTPError"];
+            "application/json": string;
           };
         };
       };
@@ -117,15 +117,146 @@ export interface paths {
         /** @description OK */
         200: {
           content: {
-            "application/json": {
-              data?: unknown;
-            } & components["schemas"]["data"];
+            "application/json": components["schemas"]["utils.Result-client_normalPost"];
           };
         };
         /** @description Internal Server Error */
         500: {
           content: {
-            "application/json": components["schemas"]["utils.HTTPError"];
+            "application/json": string;
+          };
+        };
+      };
+    };
+  };
+  "/api/client/v1/posts/{id}/like": {
+    /** Like post */
+    post: {
+      parameters: {
+        path: {
+          /** @description Post ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["utils.Result-bool"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": string;
+          };
+        };
+      };
+    };
+    /** Unlike post */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Post ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["utils.Result-bool"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": string;
+          };
+        };
+      };
+    };
+  };
+  "/api/client/v1/user": {
+    /** Get user */
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["utils.Result-client_getUserData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: {
+            "application/json": string;
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: {
+            "application/json": string;
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": string;
+          };
+        };
+      };
+    };
+  };
+  "/api/client/v1/user/likes": {
+    /** Get likes */
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["utils.Result-array_ent_Like"];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: {
+            "application/json": string;
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": string;
+          };
+        };
+      };
+    };
+  };
+  "/api/client/v1/user/login/line/{code}": {
+    /** Line login */
+    post: {
+      parameters: {
+        query: {
+          /** @description Line login redirect uri */
+          redirect_uri: string;
+        };
+        path: {
+          /** @description Line login code */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": components["schemas"]["utils.Result-string"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": string;
           };
         };
       };
@@ -152,6 +283,15 @@ export interface components {
       seller_id?: string;
       storage_type?: components["schemas"]["post.StorageType"];
       title?: string;
+    };
+    "client.getUserData": {
+      display_name?: string;
+      id?: string;
+      notified?: boolean;
+      pickup_num?: number;
+      picture_url?: string;
+      role?: components["schemas"]["user.Role"];
+      status?: components["schemas"]["user.Status"];
     };
     "client.normalPost": {
       body?: string;
@@ -197,8 +337,15 @@ export interface components {
       storage_type?: string;
       title?: string;
     };
-    data: {
-      data?: components["schemas"]["client.normalPost"];
+    "ent.Like": {
+      /** @description CreatedAt holds the value of the "created_at" field. */
+      created_at?: string;
+      /** @description ID of the ent. */
+      id?: string;
+      /** @description PostID holds the value of the "post_id" field. */
+      post_id?: string;
+      /** @description UserID holds the value of the "user_id" field. */
+      user_id?: string;
     };
     "ent.PostItem": {
       /** @description ID of the ent. */
@@ -221,20 +368,27 @@ export interface components {
       md?: string;
       sm?: string;
     };
-    "utils.HTTPError": {
-      /** @example 400 */
-      code?: number;
-      /** @example status bad request */
-      message?: string;
-    };
-    "utils.PaginatedResult-client_paginatedPost": {
-      count?: number;
+    "user.Role": string;
+    "user.Status": string;
+    "utils.InfinitePaginatedResult-client_paginatedPost": {
       data?: components["schemas"]["client.paginatedPost"][];
       has_more?: boolean;
     };
-    "utils.Result": {
-      data?: unknown;
-    } & components["schemas"]["data"];
+    "utils.Result-array_ent_Like": {
+      data?: components["schemas"]["ent.Like"][];
+    };
+    "utils.Result-bool": {
+      data?: boolean;
+    };
+    "utils.Result-client_getUserData": {
+      data?: components["schemas"]["client.getUserData"];
+    };
+    "utils.Result-client_normalPost": {
+      data?: components["schemas"]["client.normalPost"];
+    };
+    "utils.Result-string": {
+      data?: string;
+    };
   };
   responses: never;
   parameters: never;

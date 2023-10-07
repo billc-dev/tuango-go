@@ -4,6 +4,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["production", "development", "test"]),
   SESSION_SECRET: z.string(),
   SENTRY_DSN: z.string().optional(),
+  LINE_CALLBACK_URL: z.string(),
 });
 
 declare global {

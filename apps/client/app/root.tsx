@@ -1,11 +1,12 @@
+import "@mantine/carousel/styles.css";
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
-import "@mantine/carousel/styles.css";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { cssBundleHref } from "@remix-run/css-bundle";
-import type { LinksFunction, MetaFunction } from "@remix-run/node";
+import type { DataFunctionArgs, LinksFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -14,9 +15,15 @@ import {
   Scripts,
   ScrollRestoration,
   useFetchers,
+  useLoaderData,
   useNavigation,
 } from "@remix-run/react";
-import { HydrationBoundary, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import nProgress from "nprogress";
 import nProgressStyles from "nprogress/nprogress.css";
 import { useDehydratedState } from "use-dehydrated-state";
@@ -25,6 +32,8 @@ import stylesheet from "~/tailwind.css";
 import BottomNavbar from "./components/BottomNavbar";
 import Header from "./components/Header";
 import ThemeSwitch from "./components/ThemeSwitch";
+import { serverClient } from "./utils/api";
+import { getSession } from "./utils/session.server";
 
 export const meta: MetaFunction = () => [{ title: "開心團購" }];
 
@@ -34,7 +43,47 @@ export const links: LinksFunction = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
 ];
 
+export const shouldRevalidate = () => false;
+
+export const loader = async ({ request }: DataFunctionArgs) => {
+  const session = await getSession(request.headers.get("Cookie"));
+
+  const token = session.get("token");
+  const authenticated = Boolean(token);
+  const post_id = new URL(request.url).searchParams.get("post_id");
+
+  const queryClient = new QueryClient();
+
+  if (authenticated && !post_id) {
+    await queryClient.prefetchQuery({
+      // eslint-disable-next-line @tanstack/query/exhaustive-deps
+      queryKey: ["user"],
+      queryFn: async () => {
+        const { data, error } = await serverClient.GET("/api/client/v1/user", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (error) {
+          throw new Error(error);
+        }
+        return { ...data };
+      },
+    });
+  }
+
+  return json({
+    LINE_CALLBACK_URL: process.env.LINE_CALLBACK_URL,
+    dehydratedState: dehydrate(queryClient),
+    authenticated,
+  });
+};
+
+export const UserContext = createContext({ authenticated: false });
+
 export default function App() {
+  const { LINE_CALLBACK_URL, authenticated } = useLoaderData<typeof loader>();
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -97,32 +146,34 @@ export default function App() {
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
 
-      <MantineProvider
-        defaultColorScheme="auto"
-        theme={{
-          primaryColor: "lime",
-        }}
-      >
-        <body className="mb-2 flex h-[dvh] flex-col bg-zinc-50 dark:bg-zinc-900">
-          <QueryClientProvider client={queryClient}>
-            <HydrationBoundary state={dehydratedState}>
-              <Header>
-                <ThemeSwitch />
-              </Header>
-              <div
-                id="infiniteScrollTarget"
-                className="z-0 h-full max-h-[dvh-56px] overflow-y-auto"
-              >
-                <Outlet />
-              </div>
-              <BottomNavbar />
-              <ScrollRestoration />
-              <Scripts />
-              <LiveReload />
-            </HydrationBoundary>
-          </QueryClientProvider>
-        </body>
-      </MantineProvider>
+      <UserContext.Provider value={{ authenticated }}>
+        <MantineProvider
+          defaultColorScheme="auto"
+          theme={{
+            primaryColor: "lime",
+          }}
+        >
+          <body className="mb-2 flex h-[dvh] flex-col bg-zinc-50 dark:bg-zinc-900">
+            <QueryClientProvider client={queryClient}>
+              <HydrationBoundary state={dehydratedState}>
+                <Header LINE_CALLBACK_URL={LINE_CALLBACK_URL}>
+                  <ThemeSwitch />
+                </Header>
+                <div
+                  id="infiniteScrollTarget"
+                  className="z-0 h-full max-h-[dvh-56px] overflow-y-auto"
+                >
+                  <Outlet />
+                </div>
+                <BottomNavbar />
+                <ScrollRestoration />
+                <Scripts />
+                <LiveReload />
+              </HydrationBoundary>
+            </QueryClientProvider>
+          </body>
+        </MantineProvider>
+      </UserContext.Provider>
     </html>
   );
 }
