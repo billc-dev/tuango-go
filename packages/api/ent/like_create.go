@@ -213,11 +213,15 @@ func (lc *LikeCreate) createSpec() (*Like, *sqlgraph.CreateSpec) {
 // LikeCreateBulk is the builder for creating many Like entities in bulk.
 type LikeCreateBulk struct {
 	config
+	err      error
 	builders []*LikeCreate
 }
 
 // Save creates the Like entities in the database.
 func (lcb *LikeCreateBulk) Save(ctx context.Context) ([]*Like, error) {
+	if lcb.err != nil {
+		return nil, lcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(lcb.builders))
 	nodes := make([]*Like, len(lcb.builders))
 	mutators := make([]Mutator, len(lcb.builders))

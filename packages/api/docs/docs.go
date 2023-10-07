@@ -210,13 +210,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.PaginatedResult-client_paginatedPost"
+                            "$ref": "#/definitions/utils.InfinitePaginatedResult-client_paginatedPost"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.HTTPError"
+                            "type": "string"
                         }
                     }
                 }
@@ -228,7 +228,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "client/post"
+                    "client/posts"
                 ],
                 "summary": "Get post",
                 "parameters": [
@@ -244,25 +244,208 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/utils.Result"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/client.normalPost"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/utils.Result-client_normalPost"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.HTTPError"
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/client/v1/posts/{id}/like": {
+            "post": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/posts"
+                ],
+                "summary": "Like post",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-bool"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/posts"
+                ],
+                "summary": "Unlike post",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-bool"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/client/v1/user": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/user"
+                ],
+                "summary": "Get user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-client_getUserData"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/client/v1/user/likes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/likes"
+                ],
+                "summary": "Get likes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-array_ent_Like"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/client/v1/user/login/line/{code}": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/user"
+                ],
+                "summary": "Line login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Line login code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Line login redirect uri",
+                        "name": "redirect_uri",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -319,6 +502,32 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                }
+            }
+        },
+        "client.getUserData": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notified": {
+                    "type": "boolean"
+                },
+                "pickup_num": {
+                    "type": "number"
+                },
+                "picture_url": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/user.Role"
+                },
+                "status": {
+                    "$ref": "#/definitions/user.Status"
                 }
             }
         },
@@ -462,6 +671,27 @@ const docTemplate = `{
                 }
             }
         },
+        "ent.Like": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "CreatedAt holds the value of the \"created_at\" field.",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID of the ent.",
+                    "type": "string"
+                },
+                "post_id": {
+                    "description": "PostID holds the value of the \"post_id\" field.",
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "UserID holds the value of the \"user_id\" field.",
+                    "type": "string"
+                }
+            }
+        },
         "ent.PostItem": {
             "type": "object",
             "properties": {
@@ -537,25 +767,39 @@ const docTemplate = `{
                 }
             }
         },
-        "utils.HTTPError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 400
-                },
-                "message": {
-                    "type": "string",
-                    "example": "status bad request"
-                }
-            }
+        "user.Role": {
+            "type": "string",
+            "enum": [
+                "basic",
+                "basic",
+                "seller",
+                "admin"
+            ],
+            "x-enum-varnames": [
+                "DefaultRole",
+                "RoleBasic",
+                "RoleSeller",
+                "RoleAdmin"
+            ]
         },
-        "utils.PaginatedResult-client_paginatedPost": {
+        "user.Status": {
+            "type": "string",
+            "enum": [
+                "registered",
+                "registered",
+                "approved",
+                "blocked"
+            ],
+            "x-enum-varnames": [
+                "DefaultStatus",
+                "StatusRegistered",
+                "StatusApproved",
+                "StatusBlocked"
+            ]
+        },
+        "utils.InfinitePaginatedResult-client_paginatedPost": {
             "type": "object",
             "properties": {
-                "count": {
-                    "type": "integer"
-                },
                 "data": {
                     "type": "array",
                     "items": {
@@ -567,10 +811,47 @@ const docTemplate = `{
                 }
             }
         },
-        "utils.Result": {
+        "utils.Result-array_ent_Like": {
             "type": "object",
             "properties": {
-                "data": {}
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ent.Like"
+                    }
+                }
+            }
+        },
+        "utils.Result-bool": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "utils.Result-client_getUserData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/client.getUserData"
+                }
+            }
+        },
+        "utils.Result-client_normalPost": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/client.normalPost"
+                }
+            }
+        },
+        "utils.Result-string": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string"
+                }
             }
         }
     },

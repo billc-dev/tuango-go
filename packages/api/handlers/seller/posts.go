@@ -368,7 +368,7 @@ func GetPresignedUploadURL(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Could not create presigned URL")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[string]{
 		Data: presignedGetRequest.URL,
 	})
 }

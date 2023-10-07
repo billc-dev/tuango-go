@@ -307,11 +307,15 @@ func (oic *OrderItemCreate) createSpec() (*OrderItem, *sqlgraph.CreateSpec) {
 // OrderItemCreateBulk is the builder for creating many OrderItem entities in bulk.
 type OrderItemCreateBulk struct {
 	config
+	err      error
 	builders []*OrderItemCreate
 }
 
 // Save creates the OrderItem entities in the database.
 func (oicb *OrderItemCreateBulk) Save(ctx context.Context) ([]*OrderItem, error) {
+	if oicb.err != nil {
+		return nil, oicb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(oicb.builders))
 	nodes := make([]*OrderItem, len(oicb.builders))
 	mutators := make([]Mutator, len(oicb.builders))

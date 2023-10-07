@@ -196,11 +196,15 @@ func (ohc *OrderHistoryCreate) createSpec() (*OrderHistory, *sqlgraph.CreateSpec
 // OrderHistoryCreateBulk is the builder for creating many OrderHistory entities in bulk.
 type OrderHistoryCreateBulk struct {
 	config
+	err      error
 	builders []*OrderHistoryCreate
 }
 
 // Save creates the OrderHistory entities in the database.
 func (ohcb *OrderHistoryCreateBulk) Save(ctx context.Context) ([]*OrderHistory, error) {
+	if ohcb.err != nil {
+		return nil, ohcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ohcb.builders))
 	nodes := make([]*OrderHistory, len(ohcb.builders))
 	mutators := make([]Mutator, len(ohcb.builders))

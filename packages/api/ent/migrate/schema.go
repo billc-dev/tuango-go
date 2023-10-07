@@ -524,7 +524,7 @@ var (
 		{Name: "username", Type: field.TypeString, Unique: true},
 		{Name: "display_name", Type: field.TypeString},
 		{Name: "picture_url", Type: field.TypeString},
-		{Name: "pickup_num", Type: field.TypeFloat64},
+		{Name: "pickup_num", Type: field.TypeFloat64, Unique: true},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"basic", "seller", "admin"}, Default: "basic"},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"registered", "approved", "blocked"}, Default: "registered"},
 		{Name: "notified", Type: field.TypeBool, Default: false},

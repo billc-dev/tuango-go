@@ -13,3 +13,5 @@ swag-generate:
 	swag init
 swag-fmt:
 	swag fmt
+tunnel:
+	cloudflared tunnel --url http://localhost:5010

@@ -139,7 +139,7 @@ func GetPostsByDate(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Could not query posts")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[[]*ent.Post]{
 		Data: posts,
 	})
 
@@ -288,7 +288,7 @@ func CreatePost(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Could not query post")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[*ent.Post]{
 		Data: newPost,
 	})
 }
@@ -394,7 +394,7 @@ func UpdatePost(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Could not query post")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[*ent.Post]{
 		Data: newPost,
 	})
 }
@@ -422,7 +422,7 @@ func GetPost(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Post not found")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[*ent.Post]{
 		Data: p,
 	})
 }
@@ -444,7 +444,7 @@ func GetPostFinanceDelivers(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Could not query delivers")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[[]*ent.Deliver]{
 		Data: d,
 	})
 }
@@ -476,7 +476,7 @@ func UpdatePostStatus(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusInternalServerError, "Could not update post status")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[post.Status]{
 		Data: postForm.Status,
 	})
 }

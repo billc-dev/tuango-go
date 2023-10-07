@@ -236,11 +236,15 @@ func (pic *PostItemCreate) createSpec() (*PostItem, *sqlgraph.CreateSpec) {
 // PostItemCreateBulk is the builder for creating many PostItem entities in bulk.
 type PostItemCreateBulk struct {
 	config
+	err      error
 	builders []*PostItemCreate
 }
 
 // Save creates the PostItem entities in the database.
 func (picb *PostItemCreateBulk) Save(ctx context.Context) ([]*PostItem, error) {
+	if picb.err != nil {
+		return nil, picb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(picb.builders))
 	nodes := make([]*PostItem, len(picb.builders))
 	mutators := make([]Mutator, len(picb.builders))

@@ -24,7 +24,7 @@ func (User) Fields() []ent.Field {
 		field.String("username").Unique().Nillable(),
 		field.String("display_name").Nillable(),
 		field.String("picture_url").Nillable(),
-		field.Float("pickup_num").Nillable(),
+		field.Float("pickup_num").Unique().Nillable(),
 		field.Enum("role").Values("basic", "seller", "admin").Default("basic").
 			Nillable(),
 		field.Enum("status").Values("registered", "approved", "blocked").Default("registered").

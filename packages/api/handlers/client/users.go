@@ -27,43 +27,53 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+// GetUser
+//
+//	@Summary	Get user
+//	@Tags		client/user
+//	@Produce	json
+//	@Security	BearerToken
+//	@Success	200	{object}	utils.Result[getUserData]
+//	@Failure	400	{object}	utils.HTTPError
+//	@Failure	401	{object}	utils.HTTPError
+//	@Failure	500	{object}	utils.HTTPError
+//	@Router		/api/client/v1/user [get]
 func GetUser(c *fiber.Ctx) error {
 	u, ok := c.Locals("user").(*ent.User)
 
 	if !ok {
-		return fiber.NewError(http.StatusNotFound, "User not found")
+		return utils.Error(nil, http.StatusNotFound, "User not found")
 	}
 
-	u, err := database.DBConn.User.Query().Where(user.ID(u.ID)).First(c.Context())
+	u, err := database.DBConn.User.Query().
+		Select(
+			user.FieldDisplayName, user.FieldPictureURL,
+			user.FieldPickupNum, user.FieldRole,
+			user.FieldStatus, user.FieldNotified,
+		).
+		Where(user.ID(u.ID)).
+		First(c.Context())
 
 	if err != nil {
-		return fiber.NewError(http.StatusNotFound, "User not found")
+		return utils.Error(err, http.StatusNotFound, "User not found")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": u,
+	return c.JSON(utils.Result[*ent.User]{
+		Data: u,
 	})
 }
 
-const JWT_SECRET = "lkasjdfkljalskdfjaslkdfj"
-
-func Login() error {
-	userID := ""
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"userID":    userID,
-			"ExpiresAt": time.Now().Add(10 * time.Minute),
-		},
-	)
-
-	accessString, err := token.SignedString(JWT_SECRET)
-	if err != nil {
-		log.Printf("Failed to sign the token due to: %v", err)
-		return err
-	}
-	log.Print(accessString)
-	return nil
+type getUserData struct {
+	ID          string       `json:"id,omitempty"`
+	DisplayName *string      `json:"display_name,omitempty"`
+	PictureURL  *string      `json:"picture_url,omitempty"`
+	PickupNum   *float64     `json:"pickup_num,omitempty"`
+	Role        *user.Role   `json:"role,omitempty"`
+	Status      *user.Status `json:"status,omitempty"`
+	Notified    *bool        `json:"notified,omitempty"`
 }
+
+var JWT_SECRET = []byte("Jbxy4k1nklOR4U8K")
 
 type lineLoginResponse struct {
 	IDToken string `json:"id_token"`
@@ -76,20 +86,26 @@ type MyCustomClaims struct {
 	jwt.StandardClaims
 }
 
+// LineLogin
+//
+//	@Summary	Line login
+//	@Tags		client/user
+//	@Produce	json
+//	@Param		code			path		string	true	"Line login code"
+//	@Param		redirect_uri	query		string	true	"Line login redirect uri"
+//	@Success	200				{object}	utils.Result[string]
+//	@Failure	500				{object}	utils.HTTPError
+//	@Router		/api/client/v1/user/login/line/{code} [post]
 func LineLogin(c *fiber.Ctx) error {
 	code := c.Params("code")
 	m := c.Queries()
-	// log.Print(m["redirect_uri"])
 
 	payload := strings.NewReader(fmt.Sprintf(
 		"grant_type=authorization_code&code=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
 		code, "1654947889", "7c5d36284f09fad398d14d5cde0dee10", m["redirect_uri"],
 	),
 	)
-	// buf := new(bytes.Buffer)
-	// buf.ReadFrom(payload)
-	// str := buf.String()
-	// fmt.Println(str)
+
 	req, err := http.NewRequest(http.MethodPost, "https://api.line.me/oauth2/v2.1/token", payload)
 	if err != nil {
 		return utils.Error(err, http.StatusInternalServerError, "Could not create request")
@@ -118,30 +134,86 @@ func LineLogin(c *fiber.Ctx) error {
 
 	claims := token.Claims.(*MyCustomClaims)
 
-	return c.JSON(utils.Result{
-		Data: map[string]string{
-			"LineID":  claims.LineID,
-			"Name":    claims.Name,
-			"Picture": claims.Picture,
+	u, err := database.DBConn.User.Query().
+		Where(user.Username(claims.LineID)).
+		Limit(1).
+		All(c.Context())
+
+	if err != nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not query user")
+	}
+
+	var id string
+
+	if len(u) == 0 {
+		previousUser, err := database.DBConn.User.Query().
+			Select(user.FieldPickupNum).
+			Order(user.ByPickupNum(sql.OrderDesc())).
+			First(c.Context())
+		if err != nil {
+			return utils.Error(err, http.StatusInternalServerError, "Could not query previous user")
+		}
+
+		user, err := database.DBConn.User.Create().
+			SetUsername(claims.LineID).
+			SetDisplayName(claims.Name).
+			SetPictureURL(claims.Picture + "/small").
+			SetPickupNum(*previousUser.PickupNum + 1.0).
+			Save(c.Context())
+
+		if err != nil {
+			return utils.Error(err, http.StatusInternalServerError, "Could not create user")
+		}
+
+		id = user.ID
+	} else {
+		id = u[0].ID
+	}
+
+	token = jwt.NewWithClaims(jwt.SigningMethodHS256,
+		jwt.StandardClaims{
+			Id:        id,
+			ExpiresAt: time.Now().Add(time.Hour * 24 * 30).Unix(),
 		},
+	)
+
+	signedToken, err := token.SignedString(JWT_SECRET)
+	if err != nil {
+		return utils.Error(err, http.StatusInternalServerError, "Could not sign token")
+	}
+
+	return c.JSON(utils.Result[string]{
+		Data: signedToken,
 	})
 }
 
+// GetLikes
+//
+//	@Summary	Get likes
+//	@Tags		client/likes
+//	@Produce	json
+//	@Security	BearerToken
+//	@Success	200	{object}	utils.Result[[]ent.Like]
+//	@Failure	401	{object}	utils.HTTPError
+//	@Failure	500	{object}	utils.HTTPError
+//	@Router		/api/client/v1/user/likes [get]
 func GetLikes(c *fiber.Ctx) error {
 	u, ok := c.Locals("user").(*ent.User)
 
 	if !ok {
-		return fiber.NewError(http.StatusNotFound, "User not found")
+		return utils.Error(nil, http.StatusUnauthorized, "User not found")
 	}
 
-	likes, err := database.DBConn.Like.Query().Where(like.UserID(u.ID)).All(c.Context())
+	likes, err := database.DBConn.Like.Query().
+		Where(like.UserID(u.ID)).
+		All(c.Context())
 
 	if err != nil {
-		return fiber.NewError(http.StatusInternalServerError, "Could not query likes")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query likes")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": likes,
+	return c.JSON(utils.Result[[]*ent.Like]{
+		Data: likes,
 	})
 }
 

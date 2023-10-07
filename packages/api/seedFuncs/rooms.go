@@ -50,6 +50,7 @@ func SeedRooms(client *ent.Client) func(c *fiber.Ctx) error {
 				client.Room.Create().
 					SetID(r.ID).
 					SetName("").
+					SetLastMessage("").
 					SetType(room.TypePrivate).
 					SetUpdatedAt(t),
 			)
@@ -72,19 +73,6 @@ func SeedRooms(client *ent.Client) func(c *fiber.Ctx) error {
 		var bulkRoomUsers []*ent.RoomUserCreate
 
 		for _, r := range rooms {
-			t, err := time.Parse("2006-01-02T15:04:05.000Z", r.UpdatedAt)
-			if err != nil {
-				return err
-			}
-
-			bulkRooms = append(bulkRooms,
-				client.Room.Create().
-					SetID(r.ID).
-					SetName("").
-					SetType(room.TypePrivate).
-					SetUpdatedAt(t),
-			)
-
 			for _, user := range r.Users {
 				bulkRoomUsers = append(bulkRoomUsers,
 					client.RoomUser.Create().

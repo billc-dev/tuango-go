@@ -35,7 +35,7 @@ import (
 //	@Param		seller_id			query		string		false	"Seller ID"
 //	@Param		page				query		number		false	"Page (0-based)"	default(0)
 //	@Param		include_post_body	query		bool		false	"Include post body"
-//	@Success	200					{object}	utils.PaginatedResult[paginatedPost]
+//	@Success	200					{object}	utils.InfinitePaginatedResult[paginatedPost]
 //	@Failure	500					{object}	utils.HTTPError
 //	@Router		/api/client/v1/posts [get]
 func GetPosts(c *fiber.Ctx) error {
@@ -102,6 +102,8 @@ func GetPosts(c *fiber.Ctx) error {
 		postSelect = append(postSelect, post.FieldBody)
 	}
 
+	dbquerystart := time.Now()
+
 	posts, err := database.DBConn.Post.Query().
 		Select(postSelect...).
 		WithSeller(func(uq *ent.UserQuery) {
@@ -117,15 +119,9 @@ func GetPosts(c *fiber.Ctx) error {
 	if err != nil {
 		return utils.Error(err, http.StatusInternalServerError, "Could not query posts")
 	}
+	fmt.Println("DB query", time.Since(dbquerystart))
 
-	count, err := database.DBConn.Post.Query().Where(postWhere...).Count(c.Context())
-
-	if err != nil {
-		return utils.Error(err, http.StatusInternalServerError, "Could not query post count")
-	}
-
-	return c.JSON(utils.PaginatedResult[*ent.Post]{
-		Count:   count,
+	return c.JSON(utils.InfinitePaginatedResult[*ent.Post]{
 		HasMore: len(posts) == limit,
 		Data:    posts,
 	})
@@ -157,10 +153,10 @@ type paginatedPost struct {
 // GetPost
 //
 //	@Summary	Get post
-//	@Tags		client/post
+//	@Tags		client/posts
 //	@Produce	json
 //	@Param		id	path		string	true	"Post ID"
-//	@Success	200	{object}	utils.Result{data=normalPost}
+//	@Success	200	{object}	utils.Result[normalPost]
 //	@Failure	500	{object}	utils.HTTPError
 //	@Router		/api/client/v1/posts/{id} [get]
 func GetPost(c *fiber.Ctx) error {
@@ -187,7 +183,7 @@ func GetPost(c *fiber.Ctx) error {
 		return utils.Error(err, http.StatusBadRequest, "Post not found")
 	}
 
-	return c.JSON(utils.Result{
+	return c.JSON(utils.Result[*ent.Post]{
 		Data: p,
 	})
 }
@@ -261,11 +257,21 @@ func GetPostOrders(c *fiber.Ctx) error {
 	})
 }
 
+// LikePost
+//
+//	@Summary	Like post
+//	@Tags		client/posts
+//	@Produce	json
+//	@Security	BearerToken
+//	@Param		id	path		string	true	"Post ID"
+//	@Success	200	{object}	utils.Result[bool]
+//	@Failure	500	{object}	utils.HTTPError
+//	@Router		/api/client/v1/posts/{id}/like [post]
 func LikePost(c *fiber.Ctx) error {
 	u, ok := c.Locals("user").(*ent.User)
 
 	if !ok {
-		return fiber.NewError(http.StatusNotFound, "User not found")
+		return utils.Error(nil, http.StatusNotFound, "User not found")
 	}
 
 	postID := c.Params("id")
@@ -276,8 +282,7 @@ func LikePost(c *fiber.Ctx) error {
 		FirstID(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusNotFound, "Post does not exist")
+		return utils.Error(err, http.StatusNotFound, "Post does not exist")
 	}
 
 	_, err = database.DBConn.Like.
@@ -286,14 +291,12 @@ func LikePost(c *fiber.Ctx) error {
 		FirstID(c.Context())
 
 	if err == nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusBadRequest, "Like already exists or could not query like")
+		return utils.Error(err, http.StatusBadRequest, "Like already exists or could not query like")
 	}
 
-	tx, err := database.DBConn.Debug().Tx(c.Context())
+	tx, err := database.DBConn.Tx(c.Context())
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not start transaction")
+		return utils.Error(err, http.StatusInternalServerError, "Could not start transaction")
 	}
 
 	err = tx.Like.
@@ -302,29 +305,36 @@ func LikePost(c *fiber.Ctx) error {
 		SetUserID(u.ID).
 		Exec(c.Context())
 	if err != nil {
-		log.Print(err)
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "Could not create like")
+		return utils.Error(err, http.StatusInternalServerError, "Could not create like")
 	}
 
 	err = tx.Post.UpdateOneID(postID).AddLikeCount(1).Exec(c.Context())
 	if err != nil {
-		log.Print(err)
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "Could not increment like count")
+		return utils.Error(err, http.StatusInternalServerError, "Could not increment like count")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not commit transaction")
+		return utils.Error(err, http.StatusInternalServerError, "Could not commit transaction")
 	}
 
-	return c.JSON(fiber.Map{
-		"success": true,
+	return c.JSON(utils.Result[bool]{
+		Data: true,
 	})
 }
 
+// UnlikePost
+//
+//	@Summary	Unlike post
+//	@Tags		client/posts
+//	@Produce	json
+//	@Security	BearerToken
+//	@Param		id	path		string	true	"Post ID"
+//	@Success	200	{object}	utils.Result[bool]
+//	@Failure	500	{object}	utils.HTTPError
+//	@Router		/api/client/v1/posts/{id}/like [delete]
 func UnlikePost(c *fiber.Ctx) error {
 	u, ok := c.Locals("user").(*ent.User)
 

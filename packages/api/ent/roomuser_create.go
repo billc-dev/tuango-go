@@ -200,11 +200,15 @@ func (ruc *RoomUserCreate) createSpec() (*RoomUser, *sqlgraph.CreateSpec) {
 // RoomUserCreateBulk is the builder for creating many RoomUser entities in bulk.
 type RoomUserCreateBulk struct {
 	config
+	err      error
 	builders []*RoomUserCreate
 }
 
 // Save creates the RoomUser entities in the database.
 func (rucb *RoomUserCreateBulk) Save(ctx context.Context) ([]*RoomUser, error) {
+	if rucb.err != nil {
+		return nil, rucb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(rucb.builders))
 	nodes := make([]*RoomUser, len(rucb.builders))
 	mutators := make([]Mutator, len(rucb.builders))

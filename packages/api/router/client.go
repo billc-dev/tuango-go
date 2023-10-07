@@ -1,14 +1,15 @@
 package router
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/billc-dev/tuango-go/database"
 	"github.com/billc-dev/tuango-go/ent/user"
 	"github.com/billc-dev/tuango-go/handlers/client"
+	"github.com/billc-dev/tuango-go/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt"
 )
 
 func SetupClientRoutes(app *fiber.App) {
@@ -19,7 +20,6 @@ func SetupClientRoutes(app *fiber.App) {
 
 	user := v1.Group("/user")
 	user.Get("/", ClientAuthenticated, client.GetUser) // get user data
-	// user.Post("/login")                // line login and generate jwt token
 	// user.Post("/refresh") // refresh jwt token
 	user.Get("/likes", ClientAuthenticated, client.GetLikes)                               // get liked posts
 	user.Get("/orders", ClientAuthenticated, client.GetOrders)                             // get orders => query status
@@ -47,24 +47,35 @@ func ClientAuthenticated(c *fiber.Ctx) error {
 	token := strings.Replace(authorizationHeader, "Bearer ", "", 1)
 
 	if len(token) == 0 {
-		return fiber.NewError(http.StatusUnauthorized, "Bearer token missing")
+		return utils.Error(nil, http.StatusUnauthorized, "Bearer token missing")
 	}
 
-	decodedToken := "5fef56d3ec7ace8690f408c2" // TODO: fix
+	type MyClaims struct {
+		jwt.StandardClaims
+	}
+
+	parsedToken, err := jwt.ParseWithClaims(token, &MyClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return client.JWT_SECRET, nil
+	})
+
+	if err != nil {
+		return utils.Error(err, http.StatusBadRequest, "Could not parse token")
+	}
+
+	claims := parsedToken.Claims.(*MyClaims)
 
 	u, err := database.DBConn.User.
 		Query().
-		Where(user.ID(decodedToken)).
+		Where(user.ID(claims.Id)).
 		Select(user.FieldID, user.FieldDisplayName, user.FieldRole, user.FieldStatus).
 		First(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusUnauthorized, "User not found")
+		return utils.Error(err, http.StatusUnauthorized, "User not found")
 	}
 
 	if *u.Status == user.StatusBlocked {
-		return fiber.NewError(http.StatusUnauthorized, "User unauthorized")
+		return utils.Error(nil, http.StatusUnauthorized, "User unauthorized")
 	}
 
 	c.Locals("user", u)

@@ -268,11 +268,15 @@ func (cc *CompleteCreate) createSpec() (*Complete, *sqlgraph.CreateSpec) {
 // CompleteCreateBulk is the builder for creating many Complete entities in bulk.
 type CompleteCreateBulk struct {
 	config
+	err      error
 	builders []*CompleteCreate
 }
 
 // Save creates the Complete entities in the database.
 func (ccb *CompleteCreateBulk) Save(ctx context.Context) ([]*Complete, error) {
+	if ccb.err != nil {
+		return nil, ccb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(ccb.builders))
 	nodes := make([]*Complete, len(ccb.builders))
 	mutators := make([]Mutator, len(ccb.builders))

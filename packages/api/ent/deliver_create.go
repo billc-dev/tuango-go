@@ -365,11 +365,15 @@ func (dc *DeliverCreate) createSpec() (*Deliver, *sqlgraph.CreateSpec) {
 // DeliverCreateBulk is the builder for creating many Deliver entities in bulk.
 type DeliverCreateBulk struct {
 	config
+	err      error
 	builders []*DeliverCreate
 }
 
 // Save creates the Deliver entities in the database.
 func (dcb *DeliverCreateBulk) Save(ctx context.Context) ([]*Deliver, error) {
+	if dcb.err != nil {
+		return nil, dcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(dcb.builders))
 	nodes := make([]*Deliver, len(dcb.builders))
 	mutators := make([]Mutator, len(dcb.builders))
