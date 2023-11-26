@@ -1,11 +1,10 @@
 import { Fragment } from "react";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import type { ShouldRevalidateFunction } from "@remix-run/react";
+import { Outlet, type ShouldRevalidateFunction } from "@remix-run/react";
 import { dehydrate, QueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import InfiniteScroll from "react-infinite-scroll-component";
 
-import { Modal } from "~/components/Modal";
 import { PostCard } from "~/components/PostCard";
 import { client, serverClient } from "~/utils/api";
 
@@ -13,36 +12,19 @@ export const shouldRevalidate: ShouldRevalidateFunction = () => {
   return false;
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { searchParams } = new URL(request.url);
 
-  const postId = searchParams.get("postId"); // handle legacy postId
-  if (postId) {
-    return redirect(`/posts?post_id=${postId}`);
+  const legacyPostId = searchParams.get("postId"); // handle legacy postId
+  if (legacyPostId) {
+    return redirect(`/posts/${legacyPostId}`);
   }
 
   const queryClient = new QueryClient();
 
-  const post_id = searchParams.get("post_id");
+  const { postId } = params;
 
-  if (post_id) {
-    await queryClient.prefetchQuery({
-      queryKey: ["post", post_id],
-      queryFn: async () => {
-        const { data, error } = await serverClient.GET("/api/client/v1/posts/{id}", {
-          params: {
-            path: {
-              id: post_id,
-            },
-          },
-        });
-        if (error) {
-          throw new Error(error);
-        }
-        return { ...data };
-      },
-    });
-  } else {
+  if (!postId) {
     await queryClient.prefetchInfiniteQuery({
       queryKey: ["posts"],
       queryFn: async ({ pageParam }) => {
@@ -101,7 +83,8 @@ export default function Route() {
           </Fragment>
         ))}
       </div>
-      <Modal />
+      <Outlet />
+      {/* <Modal /> */}
     </InfiniteScroll>
   );
 }

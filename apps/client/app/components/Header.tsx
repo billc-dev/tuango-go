@@ -1,11 +1,11 @@
-import { useContext, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeftOnRectangleIcon } from "@heroicons/react/24/outline";
 import { Avatar, Button, Menu, Text } from "@mantine/core";
 import { Form } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 
-import { UserContext } from "~/root";
+import { useEnv } from "~/root";
 import { client } from "~/utils/api";
 
 // const links = [
@@ -18,13 +18,12 @@ import { client } from "~/utils/api";
 
 interface HeaderInterface {
   children?: React.ReactNode;
-  LINE_CALLBACK_URL: string;
 }
 
-const Header: React.FC<HeaderInterface> = ({ children, LINE_CALLBACK_URL }) => {
+const Header: React.FC<HeaderInterface> = ({ children }) => {
   const ref = useRef<HTMLFormElement>(null);
   const [retries, setRetries] = useState(0);
-  const { authenticated } = useContext(UserContext);
+  const { authenticated, LINE_CALLBACK_URL } = useEnv();
   const query = useQuery({
     enabled: authenticated,
     queryKey: ["user"],
@@ -43,7 +42,7 @@ const Header: React.FC<HeaderInterface> = ({ children, LINE_CALLBACK_URL }) => {
 
   return (
     <header className="border-b border-zinc-200 px-2 py-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-      <div className="mx-auto flex max-w-4xl items-center justify-between">
+      <div className="mx-auto flex max-w-[932px] items-center justify-between">
         {query.data?.data ? (
           <div className="flex items-center justify-center gap-2">
             <Menu shadow="md">

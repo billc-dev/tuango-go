@@ -1,11 +1,10 @@
-import { useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { UserContext } from "~/root";
+import { useEnv } from "~/root";
 import { client } from "~/utils/api";
 
 export const useUser = () => {
-  const { authenticated } = useContext(UserContext);
+  const { authenticated } = useEnv();
 
   return useQuery({
     enabled: authenticated,

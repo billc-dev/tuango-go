@@ -1,7 +1,10 @@
 import { HeartIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
+import { nanoid } from "nanoid";
 
 import { useLiked, useLikePost, useUnlikePost } from "~/queries/likes";
+import { useUser } from "~/queries/user";
+import { useEnv } from "~/root";
 import TabButton from "./TabButton";
 
 interface LikeButtonInterface {
@@ -14,11 +17,17 @@ const LikeButton: React.FC<LikeButtonInterface> = ({ postId, tabButton, likeCoun
   const liked = useLiked(postId);
   const likePost = useLikePost(postId);
   const unlikePost = useUnlikePost(postId);
+  const user = useUser();
+  const { LINE_CALLBACK_URL } = useEnv();
 
   function handleLike() {
-    // if (!userQuery.data?.data.user) {
-    //   return window.open(LINE_LOGIN_URL_WITH_PARAMS(`?redirect=${window.location.href}`), "_self");
-    // }
+    if (!user.data?.data) {
+      return window.open(
+        `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=1654947889&redirect_uri=${LINE_CALLBACK_URL}&state=${nanoid()}&scope=profile%20openid`,
+        "_self",
+      );
+      // return window.open(LINE_LOGIN_URL_WITH_PARAMS(`?redirect=${window.location.href}`), "_self");
+    }
     if (!liked) {
       return likePost.mutate(postId);
     }
@@ -37,15 +46,7 @@ const LikeButton: React.FC<LikeButtonInterface> = ({ postId, tabButton, likeCoun
       {likeCount} 喜歡
     </TabButton>
   ) : (
-    <button
-      type="button"
-      onClick={() => {
-        if (!postId) {
-          return;
-        }
-        !liked ? likePost.mutate(postId) : unlikePost.mutate(postId);
-      }}
-    >
+    <button type="button" onClick={() => handleLike()}>
       <HeartIcon
         className={clsx(
           "h-6 w-6  stroke-red-600 transition-colors",

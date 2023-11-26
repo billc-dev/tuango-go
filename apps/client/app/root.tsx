@@ -2,7 +2,7 @@ import "@mantine/carousel/styles.css";
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 
-import { createContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { DataFunctionArgs, LinksFunction, MetaFunction } from "@remix-run/node";
@@ -31,6 +31,7 @@ import { useDehydratedState } from "use-dehydrated-state";
 import stylesheet from "~/tailwind.css";
 import BottomNavbar from "./components/BottomNavbar";
 import Header from "./components/Header";
+import ReactToaster from "./components/ReactToaster";
 import ThemeSwitch from "./components/ThemeSwitch";
 import { serverClient } from "./utils/api";
 import { getSession } from "./utils/session.server";
@@ -79,7 +80,8 @@ export const loader = async ({ request }: DataFunctionArgs) => {
   });
 };
 
-export const UserContext = createContext({ authenticated: false });
+const EnvContext = createContext({ authenticated: false, LINE_CALLBACK_URL: "" });
+export const useEnv = () => useContext(EnvContext);
 
 export default function App() {
   const { LINE_CALLBACK_URL, authenticated } = useLoaderData<typeof loader>();
@@ -90,7 +92,7 @@ export default function App() {
         defaultOptions: {
           queries: {
             staleTime: 1000 * 60,
-            // refetchOnMount: "always",
+            refetchOnMount: "always",
             // retry: 1,
           },
         },
@@ -146,7 +148,7 @@ export default function App() {
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
 
-      <UserContext.Provider value={{ authenticated }}>
+      <EnvContext.Provider value={{ authenticated, LINE_CALLBACK_URL }}>
         <MantineProvider
           defaultColorScheme="auto"
           theme={{
@@ -156,13 +158,11 @@ export default function App() {
           <body className="mb-2 flex h-[dvh] flex-col bg-zinc-50 dark:bg-zinc-900">
             <QueryClientProvider client={queryClient}>
               <HydrationBoundary state={dehydratedState}>
-                <Header LINE_CALLBACK_URL={LINE_CALLBACK_URL}>
+                <Header>
                   <ThemeSwitch />
                 </Header>
-                <div
-                  id="infiniteScrollTarget"
-                  className="z-0 h-full max-h-[dvh-56px] overflow-y-auto"
-                >
+                <ReactToaster />
+                <div id="infiniteScrollTarget" className="h-full max-h-[dvh-56px] overflow-y-auto">
                   <Outlet />
                 </div>
                 <BottomNavbar />
@@ -173,7 +173,7 @@ export default function App() {
             </QueryClientProvider>
           </body>
         </MantineProvider>
-      </UserContext.Provider>
+      </EnvContext.Provider>
     </html>
   );
 }

@@ -20,7 +20,7 @@ const links = [
 export default function BottomNavbar() {
   const location = useLocation();
   return (
-    <div className="z-10 rounded-t-2xl bg-white ring-1 ring-zinc-300 dark:bg-zinc-800 dark:ring-zinc-700">
+    <div className="rounded-t-2xl bg-white ring-1 ring-zinc-300 dark:bg-zinc-800 dark:ring-zinc-700">
       <div className="mx-auto flex max-w-sm gap-2">
         {links.map((link) => (
           <Link

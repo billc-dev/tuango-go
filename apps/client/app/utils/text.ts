@@ -14,3 +14,16 @@ export const getStorageTypeLabel = (storageType?: components["schemas"]["post.St
       return "";
   }
 };
+
+export const getOrderStatusLabel = (orderStatus?: components["schemas"]["order.Status"]) => {
+  switch (orderStatus) {
+    case "delivered":
+      return "已到貨 🚚";
+    case "completed":
+      return "已取貨 ✅";
+    case "missing":
+      return "尋貨中 🔍";
+    default:
+      return "";
+  }
+};

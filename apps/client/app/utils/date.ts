@@ -9,10 +9,18 @@ dayjs.extend(localizedFormat);
 dayjs.extend(relativeTime);
 dayjs.locale("zh-tw");
 
-export const getFullDateFromNow = (date?: string) => {
+export const getFullDateFromNow = (date: string | undefined) => {
   return `${dayjs(date).format("LLLL")} ${dayjs(date).fromNow()}`;
 };
 
 export const date = (date: string) => {
   return dayjs(date).format("LLLL").slice(0, -6);
+};
+
+export const getFullDate = (date: string | undefined) => {
+  return dayjs(date).format("LLL");
+};
+
+export const getRelativeDate = (date: string | undefined) => {
+  return dayjs(date).fromNow();
 };

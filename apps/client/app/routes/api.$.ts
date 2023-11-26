@@ -38,7 +38,7 @@ export async function action({ request, params }: DataFunctionArgs) {
   const url = new URL(request.url);
   const query = Object.fromEntries(new URLSearchParams(url.searchParams));
 
-  console.log("POST API request:", `/api/${params["*"]}`);
+  console.log(`${request.method} API request:`, `/api/${params["*"]}`);
   console.log("query", query);
 
   const session = await getSession(request.headers.get("Cookie"));
@@ -51,6 +51,7 @@ export async function action({ request, params }: DataFunctionArgs) {
       method: request.method,
       headers: {
         Authorization: token ? `Bearer ${token}` : "",
+        "Content-Type": request.headers.get("Content-Type") ?? "",
       },
       body: request.body,
     },
