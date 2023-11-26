@@ -31,15 +31,15 @@ func SetupClientRoutes(app *fiber.App) {
 	posts := v1.Group("/posts")
 	posts.Get("/", client.GetPosts) // get posts => query postNum, status, title, dates
 	// posts.Get("/hot")                                                         // get hot posts
-	posts.Get("/:id", client.GetPost)                                 // get post
-	posts.Get("/:id/comments", client.GetPostComments)                // get post comments
-	posts.Get("/:id/orders", client.GetPostOrders)                    // get post orders
-	posts.Post("/:id/like", ClientAuthenticated, client.LikePost)     // like a post
-	posts.Delete("/:id/like", ClientAuthenticated, client.UnlikePost) // unlike a post
+	posts.Get("/:id", client.GetPost)                                       // get post
+	posts.Get("/:id/comments", ClientAuthenticated, client.GetPostComments) // get post comments
+	posts.Get("/:id/orders", ClientAuthenticated, client.GetPostOrders)     // get post orders
+	posts.Post("/:id/like", ClientAuthenticated, client.LikePost)           // like a post
+	posts.Delete("/:id/like", ClientAuthenticated, client.UnlikePost)       // unlike a post
 
-	orders := v1.Group("/orders")
-	orders.Post("/", ClientAuthenticated, client.CreateOrder)      // create order
-	orders.Delete("/:id", ClientAuthenticated, client.CancelOrder) // delete order if post status is open and order status is ordered
+	orders := v1.Group("/orders", ClientAuthenticated)
+	orders.Post("/", client.CreateOrder)      // create order
+	orders.Delete("/:id", client.CancelOrder) // delete order if post status is open and order status is ordered
 }
 
 func ClientAuthenticated(c *fiber.Ctx) error {

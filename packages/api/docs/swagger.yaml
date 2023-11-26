@@ -36,6 +36,100 @@ components:
         title:
           type: string
       type: object
+    client.createOrderData:
+      properties:
+        comment:
+          description: Comment holds the value of the "comment" field.
+          type: string
+        created_at:
+          description: CreatedAt holds the value of the "created_at" field.
+          type: string
+        fb:
+          description: Fb holds the value of the "fb" field.
+          type: boolean
+        has_name:
+          description: HasName holds the value of the "has_name" field.
+          type: boolean
+        id:
+          description: ID of the ent.
+          type: string
+        is_extra:
+          description: IsExtra holds the value of the "is_extra" field.
+          type: boolean
+        is_in_stock:
+          description: IsInStock holds the value of the "is_in_stock" field.
+          type: boolean
+        order_num:
+          description: OrderNum holds the value of the "order_num" field.
+          type: integer
+        post:
+          properties:
+            body:
+              type: string
+            comment_count:
+              type: integer
+            created_at:
+              type: string
+            deadline:
+              type: string
+            delivery_date:
+              type: string
+            id:
+              type: string
+            images:
+              items:
+                $ref: '#/components/schemas/schema.Image'
+              type: array
+              uniqueItems: false
+            like_count:
+              type: integer
+            order_count:
+              type: integer
+            post_items:
+              items:
+                $ref: '#/components/schemas/ent.PostItem'
+              type: array
+              uniqueItems: false
+            post_num:
+              type: integer
+            seller:
+              properties:
+                display_name:
+                  type: string
+                id:
+                  type: string
+                picture_url:
+                  type: string
+              type: object
+            seller_id:
+              type: string
+            status:
+              $ref: '#/components/schemas/post.Status'
+            storage_type:
+              type: string
+              x-enum-varnames:
+              - StorageTypeRoomTemp
+              - StorageTypeFarmGoods
+              - StorageTypeRefrigerated
+              - StorageTypeFrozen
+            title:
+              type: string
+          type: object
+        post_id:
+          description: PostID holds the value of the "post_id" field.
+          type: string
+        seller_comment:
+          description: SellerComment holds the value of the "seller_comment" field.
+          type: string
+        status:
+          $ref: '#/components/schemas/order.Status'
+        updated_at:
+          description: UpdatedAt holds the value of the "updated_at" field.
+          type: string
+        user_id:
+          description: UserID holds the value of the "user_id" field.
+          type: string
+      type: object
     client.getUserData:
       properties:
         display_name:
@@ -112,6 +206,19 @@ components:
         title:
           type: string
       type: object
+    client.orderForm:
+      properties:
+        comment:
+          type: string
+        order:
+          additionalProperties:
+            type: number
+          type: object
+        postId:
+          type: string
+        sum:
+          type: number
+      type: object
     client.paginatedPost:
       properties:
         body:
@@ -154,7 +261,13 @@ components:
         seller_id:
           type: string
         status:
-          $ref: '#/components/schemas/post.Status'
+          type: string
+          x-enum-varnames:
+          - DefaultStatus
+          - StatusOpen
+          - StatusClosed
+          - StatusCompleted
+          - StatusCanceled
         storage_type:
           type: string
           x-enum-varnames:
@@ -163,6 +276,78 @@ components:
           - StorageTypeRefrigerated
           - StorageTypeFrozen
         title:
+          type: string
+      type: object
+    client.postOrder:
+      properties:
+        comment:
+          type: string
+        created_at:
+          type: string
+        fb:
+          type: boolean
+        has_name:
+          type: boolean
+        id:
+          type: string
+        is_extra:
+          type: boolean
+        is_in_stock:
+          type: boolean
+        order_items:
+          items:
+            properties:
+              has_name:
+                type: boolean
+              id:
+                type: string
+              identifier:
+                type: string
+              location:
+                type: string
+              name:
+                type: string
+              order_id:
+                type: string
+              post_item_id:
+                type: string
+              price:
+                type: number
+              qty:
+                type: number
+              status:
+                $ref: '#/components/schemas/orderitem.Status'
+            type: object
+          type: array
+          uniqueItems: false
+        order_num:
+          type: integer
+        post_id:
+          type: string
+        seller_comment:
+          type: string
+        status:
+          description: Status holds the value of the "status" field.
+          type: string
+          x-enum-varnames:
+          - StatusOrdered
+          - StatusConfirmed
+          - StatusDelivered
+          - StatusCompleted
+          - StatusMissing
+          - StatusCanceled
+        updated_at:
+          type: string
+        user:
+          properties:
+            display_name:
+              type: string
+            id:
+              type: string
+            picture_url:
+              type: string
+          type: object
+        user_id:
           type: string
       type: object
     ent.Like:
@@ -201,6 +386,25 @@ components:
           description: Stock holds the value of the "stock" field.
           type: number
       type: object
+    order.Status:
+      description: Status holds the value of the "status" field.
+      type: string
+      x-enum-varnames:
+      - StatusOrdered
+      - StatusConfirmed
+      - StatusDelivered
+      - StatusCompleted
+      - StatusMissing
+      - StatusCanceled
+    orderitem.Status:
+      type: string
+      x-enum-varnames:
+      - StatusOrdered
+      - StatusConfirmed
+      - StatusDelivered
+      - StatusCompleted
+      - StatusMissing
+      - StatusCanceled
     post.Status:
       type: string
       x-enum-varnames:
@@ -249,6 +453,14 @@ components:
         has_more:
           type: boolean
       type: object
+    utils.Result-array_client_postOrder:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/client.postOrder'
+          type: array
+          uniqueItems: false
+      type: object
     utils.Result-array_ent_Like:
       properties:
         data:
@@ -261,6 +473,11 @@ components:
       properties:
         data:
           type: boolean
+      type: object
+    utils.Result-client_createOrderData:
+      properties:
+        data:
+          $ref: '#/components/schemas/client.createOrderData'
       type: object
     utils.Result-client_getUserData:
       properties:
@@ -380,6 +597,60 @@ paths:
       summary: Create post
       tags:
       - admin/posts
+  /api/client/v1/orders:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/client.orderForm'
+        description: Order form
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.Result-client_createOrderData'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
+      security:
+      - BearerToken: []
+      summary: Create order
+      tags:
+      - client/orders
+  /api/client/v1/orders/{id}:
+    delete:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.Result-bool'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
+      security:
+      - BearerToken: []
+      summary: Cancel order
+      tags:
+      - client/orders
   /api/client/v1/posts:
     get:
       parameters:
@@ -388,17 +659,6 @@ paths:
         name: post_num
         schema:
           type: number
-      - description: Post status
-        in: query
-        name: status
-        schema:
-          enum:
-          - open
-          - open
-          - closed
-          - completed
-          - canceled
-          type: string
       - description: Text
         in: query
         name: text
@@ -522,6 +782,33 @@ paths:
       security:
       - BearerToken: []
       summary: Like post
+      tags:
+      - client/posts
+  /api/client/v1/posts/{id}/orders:
+    get:
+      parameters:
+      - description: Post ID
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.Result-array_client_postOrder'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
+      security:
+      - BearerToken: []
+      summary: Get post orders
       tags:
       - client/posts
   /api/client/v1/user:

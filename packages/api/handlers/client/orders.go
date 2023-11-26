@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/billc-dev/tuango-go/database"
@@ -12,6 +13,9 @@ import (
 	"github.com/billc-dev/tuango-go/ent/orderitem"
 	"github.com/billc-dev/tuango-go/ent/post"
 	"github.com/billc-dev/tuango-go/ent/postitem"
+	"github.com/billc-dev/tuango-go/ent/schema"
+	"github.com/billc-dev/tuango-go/ent/user"
+	"github.com/billc-dev/tuango-go/utils"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -19,20 +23,30 @@ type orderForm struct {
 	PostID  string             `json:"postId"`
 	Order   map[string]float64 `json:"order"`
 	Comment string             `json:"comment"`
+	Sum     float64            `json:"sum"`
 }
 
+// CreateOrder
+//
+//	@Summary	Create order
+//	@Tags		client/orders
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerToken
+//	@Param		order	body		orderForm	true	"Order form"
+//	@Success	200		{object}	utils.Result[createOrderData]
+//	@Failure	500		{object}	utils.HTTPError
+//	@Router		/api/client/v1/orders [post]
 func CreateOrder(c *fiber.Ctx) error {
 	u, ok := c.Locals("user").(*ent.User)
-
 	if !ok {
-		return fiber.NewError(http.StatusNotFound, "User not found")
+		return utils.Error(nil, http.StatusUnauthorized, "User not found")
 	}
 
 	orderForm := new(orderForm)
 
 	if err := c.BodyParser(orderForm); err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusBadRequest, "Could not parse order form")
+		return utils.Error(err, http.StatusBadRequest, "Could not parse order form")
 	}
 
 	postID, err := database.DBConn.Post.Query().
@@ -40,18 +54,17 @@ func CreateOrder(c *fiber.Ctx) error {
 		FirstID(c.Context())
 
 	if err != nil {
-		return fiber.NewError(http.StatusBadRequest, "Could not find post")
+		return utils.Error(err, http.StatusBadRequest, "Could not find post")
 	}
 
 	postItems, err := database.DBConn.PostItem.Query().Where(postitem.PostID(postID)).All(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not query post items")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query post items")
 	}
 
 	if len(postItems) == 0 {
-		return fiber.NewError(http.StatusInternalServerError, "No post items were found")
+		return utils.Error(err, http.StatusInternalServerError, "No post items were found")
 	}
 
 	errors := fiber.Map{}
@@ -71,7 +84,9 @@ func CreateOrder(c *fiber.Ctx) error {
 			}
 		}
 		if !found {
-			return fiber.NewError(http.StatusBadRequest, fmt.Sprintf(`Order contains invalid post item id "%s"`, itemId))
+			return utils.Error(err, http.StatusBadRequest,
+				fmt.Sprintf(`Order contains invalid post item id "%s"`, itemId),
+			)
 		}
 	}
 
@@ -89,7 +104,7 @@ func CreateOrder(c *fiber.Ctx) error {
 		All(c.Context())
 
 	if err != nil {
-		return fiber.NewError(http.StatusInternalServerError, "Could not query previousOrder")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query previousOrder")
 	}
 
 	orderNum := 1
@@ -100,8 +115,7 @@ func CreateOrder(c *fiber.Ctx) error {
 
 	tx, err := database.DBConn.Debug().Tx(c.Context())
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Could not start transaction")
+		return utils.Error(err, http.StatusInternalServerError, "Could not start transaction")
 	}
 
 	newOrder, err := tx.Order.Create().
@@ -109,12 +123,12 @@ func CreateOrder(c *fiber.Ctx) error {
 		SetPostID(postID).
 		SetOrderNum(orderNum).
 		SetComment(orderForm.Comment).
+		SetStatus(order.StatusOrdered).
 		Save(c.Context())
 
 	if err != nil {
-		log.Print(err)
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "Could not create order")
+		return utils.Error(err, http.StatusInternalServerError, "Could not create order")
 	}
 
 	orderItems := []*ent.OrderItemCreate{}
@@ -133,20 +147,19 @@ func CreateOrder(c *fiber.Ctx) error {
 						SetIdentifier(*postItem.Identifier).
 						SetName(*postItem.Name).
 						SetPrice(*postItem.Price).
-						SetQty(qty),
+						SetQty(qty).
+						SetStatus(orderitem.StatusOrdered),
 				)
 				pi, err := tx.PostItem.Query().Where(postitem.ID(postItem.ID)).First(c.Context())
 				if err != nil {
-					log.Print(err)
 					tx.Rollback()
-					return fiber.NewError(http.StatusInternalServerError, "Could not query post item")
+					return utils.Error(err, http.StatusInternalServerError, "Could not query post item")
 				}
 				err = pi.Update().AddStock(-qty).Exec(c.Context())
 				// TODO: check if stock is negative here
 				if err != nil {
-					log.Print(err)
 					tx.Rollback()
-					return fiber.NewError(http.StatusInternalServerError, "Could not update post item stock")
+					return utils.Error(err, http.StatusInternalServerError, "Could not update post item stock")
 				}
 			}
 		}
@@ -154,7 +167,7 @@ func CreateOrder(c *fiber.Ctx) error {
 
 	if len(orderItems) == 0 {
 		tx.Rollback()
-		return fiber.NewError(http.StatusInternalServerError, "No order to create")
+		return utils.Error(nil, http.StatusBadRequest, "No order to create")
 	}
 
 	err = tx.OrderItem.CreateBulk(orderItems...).Exec(c.Context())
@@ -188,6 +201,19 @@ func CreateOrder(c *fiber.Ctx) error {
 				orderitem.FieldPrice, orderitem.FieldQty,
 			).Order(orderitem.ByIdentifier())
 		}).
+		WithPost(func(pq *ent.PostQuery) {
+			pq.Select(
+				post.FieldPostNum, post.FieldTitle, post.FieldBody,
+				post.FieldDeadline, post.FieldDeliveryDate,
+				post.FieldLikeCount, post.FieldCommentCount, post.FieldOrderCount,
+				post.FieldImages, post.FieldStorageType, post.FieldStatus, post.FieldCreatedAt,
+			).WithSeller(func(uq *ent.UserQuery) {
+				uq.Select(user.FieldDisplayName, user.FieldPictureURL)
+			}).
+				WithPostItems(func(piq *ent.PostItemQuery) {
+					piq.Order(postitem.ByIdentifier())
+				})
+		}).
 		First(c.Context())
 
 	if err != nil {
@@ -196,16 +222,51 @@ func CreateOrder(c *fiber.Ctx) error {
 		return fiber.NewError(http.StatusInternalServerError, "Could not query order")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": newOrder,
+	return c.JSON(utils.Result[*ent.Order]{
+		Data: newOrder,
 	})
 }
 
+type createOrderData struct {
+	ent.Order
+	Post struct {
+		ID           string           `json:"id"`
+		SellerID     string           `json:"seller_id"`
+		PostNum      int              `json:"post_num"`
+		Title        string           `json:"title"`
+		Body         string           `json:"body"`
+		Deadline     string           `json:"deadline"`
+		DeliveryDate string           `json:"delivery_date"`
+		LikeCount    int              `json:"like_count"`
+		CommentCount int              `json:"comment_count"`
+		OrderCount   int              `json:"order_count"`
+		Images       []schema.Image   `json:"images"`
+		StorageType  post.StorageType `json:"storage_type"`
+		Status       post.Status      `json:"status"`
+		CreatedAt    time.Time        `json:"created_at"`
+		PostItems    []ent.PostItem   `json:"post_items"`
+		Seller       struct {
+			ID          string `json:"id"`
+			DisplayName string `json:"display_name"`
+			PictureURL  string `json:"picture_url"`
+		} `json:"seller"`
+	}
+}
+
+// CancelOrder
+//
+//	@Summary	Cancel order
+//	@Tags		client/orders
+//	@Produce	json
+//	@Security	BearerToken
+//	@Param		id	path		string	true	"Order ID"
+//	@Success	200	{object}	utils.Result[bool]
+//	@Failure	500	{object}	utils.HTTPError
+//	@Router		/api/client/v1/orders/{id} [delete]
 func CancelOrder(c *fiber.Ctx) error {
 	orderID := c.Params("id")
 
 	u, ok := c.Locals("user").(*ent.User)
-
 	if !ok {
 		return fiber.NewError(http.StatusNotFound, "User not found")
 	}

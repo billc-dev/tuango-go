@@ -139,6 +139,89 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/client/v1/orders": {
+            "post": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/orders"
+                ],
+                "summary": "Create order",
+                "parameters": [
+                    {
+                        "description": "Order form",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/client.orderForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-client_createOrderData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/client/v1/orders/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/orders"
+                ],
+                "summary": "Cancel order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-bool"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/client/v1/posts": {
             "get": {
                 "produces": [
@@ -332,6 +415,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/client/v1/posts/{id}/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client/posts"
+                ],
+                "summary": "Get post orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Result-array_client_postOrder"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/client/v1/user": {
             "get": {
                 "security": [
@@ -505,6 +627,137 @@ const docTemplate = `{
                 }
             }
         },
+        "client.createOrderData": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "description": "Comment holds the value of the \"comment\" field.",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "CreatedAt holds the value of the \"created_at\" field.",
+                    "type": "string"
+                },
+                "fb": {
+                    "description": "Fb holds the value of the \"fb\" field.",
+                    "type": "boolean"
+                },
+                "has_name": {
+                    "description": "HasName holds the value of the \"has_name\" field.",
+                    "type": "boolean"
+                },
+                "id": {
+                    "description": "ID of the ent.",
+                    "type": "string"
+                },
+                "is_extra": {
+                    "description": "IsExtra holds the value of the \"is_extra\" field.",
+                    "type": "boolean"
+                },
+                "is_in_stock": {
+                    "description": "IsInStock holds the value of the \"is_in_stock\" field.",
+                    "type": "boolean"
+                },
+                "order_num": {
+                    "description": "OrderNum holds the value of the \"order_num\" field.",
+                    "type": "integer"
+                },
+                "post": {
+                    "type": "object",
+                    "properties": {
+                        "body": {
+                            "type": "string"
+                        },
+                        "comment_count": {
+                            "type": "integer"
+                        },
+                        "created_at": {
+                            "type": "string"
+                        },
+                        "deadline": {
+                            "type": "string"
+                        },
+                        "delivery_date": {
+                            "type": "string"
+                        },
+                        "id": {
+                            "type": "string"
+                        },
+                        "images": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/schema.Image"
+                            }
+                        },
+                        "like_count": {
+                            "type": "integer"
+                        },
+                        "order_count": {
+                            "type": "integer"
+                        },
+                        "post_items": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/ent.PostItem"
+                            }
+                        },
+                        "post_num": {
+                            "type": "integer"
+                        },
+                        "seller": {
+                            "type": "object",
+                            "properties": {
+                                "display_name": {
+                                    "type": "string"
+                                },
+                                "id": {
+                                    "type": "string"
+                                },
+                                "picture_url": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "seller_id": {
+                            "type": "string"
+                        },
+                        "status": {
+                            "$ref": "#/definitions/post.Status"
+                        },
+                        "storage_type": {
+                            "$ref": "#/definitions/post.StorageType"
+                        },
+                        "title": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "post_id": {
+                    "description": "PostID holds the value of the \"post_id\" field.",
+                    "type": "string"
+                },
+                "seller_comment": {
+                    "description": "SellerComment holds the value of the \"seller_comment\" field.",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status holds the value of the \"status\" field.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/order.Status"
+                        }
+                    ]
+                },
+                "updated_at": {
+                    "description": "UpdatedAt holds the value of the \"updated_at\" field.",
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "UserID holds the value of the \"user_id\" field.",
+                    "type": "string"
+                }
+            }
+        },
         "client.getUserData": {
             "type": "object",
             "properties": {
@@ -601,6 +854,26 @@ const docTemplate = `{
                 }
             }
         },
+        "client.orderForm": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "postId": {
+                    "type": "string"
+                },
+                "sum": {
+                    "type": "number"
+                }
+            }
+        },
         "client.paginatedPost": {
             "type": "object",
             "properties": {
@@ -671,6 +944,102 @@ const docTemplate = `{
                 }
             }
         },
+        "client.postOrder": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "fb": {
+                    "type": "boolean"
+                },
+                "has_name": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_extra": {
+                    "type": "boolean"
+                },
+                "is_in_stock": {
+                    "type": "boolean"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "has_name": {
+                                "type": "boolean"
+                            },
+                            "id": {
+                                "type": "string"
+                            },
+                            "identifier": {
+                                "type": "string"
+                            },
+                            "location": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "order_id": {
+                                "type": "string"
+                            },
+                            "post_item_id": {
+                                "type": "string"
+                            },
+                            "price": {
+                                "type": "number"
+                            },
+                            "qty": {
+                                "type": "number"
+                            },
+                            "status": {
+                                "$ref": "#/definitions/orderitem.Status"
+                            }
+                        }
+                    }
+                },
+                "order_num": {
+                    "type": "integer"
+                },
+                "post_id": {
+                    "type": "string"
+                },
+                "seller_comment": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/order.Status"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "display_name": {
+                            "type": "string"
+                        },
+                        "id": {
+                            "type": "string"
+                        },
+                        "picture_url": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "ent.Like": {
             "type": "object",
             "properties": {
@@ -720,6 +1089,44 @@ const docTemplate = `{
                     "type": "number"
                 }
             }
+        },
+        "order.Status": {
+            "type": "string",
+            "enum": [
+                "ordered",
+                "confirmed",
+                "delivered",
+                "completed",
+                "missing",
+                "canceled"
+            ],
+            "x-enum-varnames": [
+                "StatusOrdered",
+                "StatusConfirmed",
+                "StatusDelivered",
+                "StatusCompleted",
+                "StatusMissing",
+                "StatusCanceled"
+            ]
+        },
+        "orderitem.Status": {
+            "type": "string",
+            "enum": [
+                "ordered",
+                "confirmed",
+                "delivered",
+                "completed",
+                "missing",
+                "canceled"
+            ],
+            "x-enum-varnames": [
+                "StatusOrdered",
+                "StatusConfirmed",
+                "StatusDelivered",
+                "StatusCompleted",
+                "StatusMissing",
+                "StatusCanceled"
+            ]
         },
         "post.Status": {
             "type": "string",
@@ -811,6 +1218,17 @@ const docTemplate = `{
                 }
             }
         },
+        "utils.Result-array_client_postOrder": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/client.postOrder"
+                    }
+                }
+            }
+        },
         "utils.Result-array_ent_Like": {
             "type": "object",
             "properties": {
@@ -827,6 +1245,14 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "type": "boolean"
+                }
+            }
+        },
+        "utils.Result-client_createOrderData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/client.createOrderData"
                 }
             }
         },

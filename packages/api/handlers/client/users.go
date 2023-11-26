@@ -199,7 +199,6 @@ func LineLogin(c *fiber.Ctx) error {
 //	@Router		/api/client/v1/user/likes [get]
 func GetLikes(c *fiber.Ctx) error {
 	u, ok := c.Locals("user").(*ent.User)
-
 	if !ok {
 		return utils.Error(nil, http.StatusUnauthorized, "User not found")
 	}

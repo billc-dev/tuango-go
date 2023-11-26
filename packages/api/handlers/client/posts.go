@@ -13,6 +13,7 @@ import (
 	"github.com/billc-dev/tuango-go/ent/comment"
 	"github.com/billc-dev/tuango-go/ent/like"
 	"github.com/billc-dev/tuango-go/ent/order"
+	"github.com/billc-dev/tuango-go/ent/orderitem"
 	"github.com/billc-dev/tuango-go/ent/post"
 	"github.com/billc-dev/tuango-go/ent/postitem"
 	"github.com/billc-dev/tuango-go/ent/predicate"
@@ -230,10 +231,20 @@ func GetPostComments(c *fiber.Ctx) error {
 	})
 }
 
+// GetPostOrders
+//
+//	@Summary	Get post orders
+//	@Tags		client/posts
+//	@Produce	json
+//	@Security	BearerToken
+//	@Param		id	path		string	true	"Post ID"
+//	@Success	200	{object}	utils.Result[[]postOrder]
+//	@Failure	500	{object}	utils.HTTPError
+//	@Router		/api/client/v1/posts/{id}/orders [get]
 func GetPostOrders(c *fiber.Ctx) error {
 	postID := c.Params("id")
 
-	p, err := database.DBConn.Order.
+	o, err := database.DBConn.Order.
 		Query().
 		Where(
 			order.PostID(postID),
@@ -241,6 +252,7 @@ func GetPostOrders(c *fiber.Ctx) error {
 			order.StatusNEQ(order.StatusCanceled),
 			order.HasPostWith(post.StatusIn(post.StatusOpen, post.StatusClosed)),
 		).
+		WithOrderItems().
 		WithUser(func(uq *ent.UserQuery) {
 			uq.Select(user.FieldDisplayName, user.FieldPictureURL)
 		}).
@@ -248,13 +260,45 @@ func GetPostOrders(c *fiber.Ctx) error {
 		All(c.Context())
 
 	if err != nil {
-		log.Print(err)
-		return fiber.NewError(http.StatusInternalServerError, "Post comment not found")
+		return utils.Error(err, http.StatusInternalServerError, "Could not query post orders")
 	}
 
-	return c.JSON(fiber.Map{
-		"data": p,
+	return c.JSON(utils.Result[[]*ent.Order]{
+		Data: o,
 	})
+}
+
+type postOrder struct {
+	ID            string       `json:"id"`
+	UserID        string       `json:"user_id"`
+	PostID        string       `json:"post_id"`
+	OrderNum      int          `json:"order_num"`
+	Comment       string       `json:"comment"`
+	SellerComment string       `json:"seller_comment"`
+	HasName       bool         `json:"has_name"`
+	IsExtra       bool         `json:"is_extra"`
+	Fb            bool         `json:"fb"`
+	IsInStock     bool         `json:"is_in_stock"`
+	Status        order.Status `json:"status"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
+	OrderItems    []struct {
+		ID         string           `json:"id"`
+		OrderID    string           `json:"order_id"`
+		PostItemID string           `json:"post_item_id"`
+		Identifier string           `json:"identifier"`
+		Name       string           `json:"name"`
+		Price      float64          `json:"price"`
+		Qty        float64          `json:"qty"`
+		Location   string           `json:"location"`
+		HasName    bool             `json:"has_name"`
+		Status     orderitem.Status `json:"status"`
+	} `json:"order_items"`
+	User struct {
+		ID          string `json:"id"`
+		DisplayName string `json:"display_name"`
+		PictureURL  string `json:"picture_url"`
+	} `json:"user"`
 }
 
 // LikePost
